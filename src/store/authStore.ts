@@ -6,17 +6,17 @@ type Credentials = {
     apiTokenInstance: string;
 };
 
-type AuthState = Credentials & {
+type AuthState = {
+    credentials: Credentials | null;
     setCredentials: (credentials: Credentials) => void;
 };
 
 export const useAuthStore = create<AuthState>()(
     persist(
         (set) => ({
-            idInstance: '',
-            apiTokenInstance: '',
+            credentials: null,
             setCredentials: ({ idInstance, apiTokenInstance }) =>
-                set({ idInstance, apiTokenInstance }),
+                set({ credentials: { apiTokenInstance, idInstance } }),
         }),
         {
             name: 'auth',
