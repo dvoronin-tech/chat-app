@@ -1,7 +1,7 @@
-import AsideBar from './components/AsideBar/AsideBar';
+import Main from './pages/Main/Main';
 
 function App() {
-    return <AsideBar />;
+    return <Main />;
 }
 
 export default App;

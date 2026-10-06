@@ -1,0 +1,56 @@
+.root {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2.4rem;
+    background-color: var(--color-bg-main);
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
+    width: 100%;
+    max-width: 42rem;
+    padding: 2.4rem;
+    border-radius: 1.6rem;
+    background-color: var(--color-bg-ui);
+}
+
+.title {
+    font-size: 2.8rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.label {
+    font-size: 1.4rem;
+    color: var(--color-text-secondary);
+}
+
+.submit {
+    height: 4rem;
+    margin-top: 0.4rem;
+    border-radius: 1rem;
+    background-color: var(--color-primary);
+    color: var(--color-text-accent-button);
+    font-size: 1.6rem;
+    font-weight: 700;
+
+    &:hover {
+        filter: brightness(1.08);
+    }
+
+    &:focus-visible {
+        outline: 0.2rem solid var(--color-text-accent-button);
+        outline-offset: 0.2rem;
+    }
+}
