@@ -25,28 +25,25 @@
 }
 
 .add {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     flex-shrink: 0;
     width: 4rem;
     height: 4rem;
     border-radius: 50%;
-    background-color: var(--color-primary);
-    color: var(--color-text-accent-button);
+    transition: scale 0.2s ease;
+
+    @media screen and (hover: hover) {
+        &:hover {
+            scale: 1.1;
+        }
+    }
+
+    &:active {
+        scale: 0.95;
+    }
 
     svg {
         width: 2.2rem;
         height: 2.2rem;
-    }
-
-    &:hover {
-        filter: brightness(1.08);
-    }
-
-    &:focus-visible {
-        outline: 0.2rem solid var(--color-text-accent-button);
-        outline-offset: 0.2rem;
     }
 }
 

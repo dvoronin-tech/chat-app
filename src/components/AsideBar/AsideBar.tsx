@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import PlusIcon from '../../assets/plus.svg?react';
+import Button from '../Button/Button';
 import Input from '../Input/Input';
 import styles from './AsideBar.module.scss';
 
@@ -10,21 +12,14 @@ export default function AsideBar() {
             <div className={styles.headerControls}>
                 <header className={styles.header}>
                     <h1 className={styles.title}>Чаты</h1>
-                    <button
+                    <Button
                         type="button"
+                        variant="primary"
                         className={styles.add}
                         aria-label="Новый чат"
                     >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path
-                                d="M12 5v14M5 12h14"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.4"
-                                strokeLinecap="round"
-                            />
-                        </svg>
-                    </button>
+                        <PlusIcon />
+                    </Button>
                 </header>
                 <Input
                     type="search"

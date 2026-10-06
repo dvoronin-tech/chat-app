@@ -1,0 +1,19 @@
+.root {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.primary {
+    background-color: var(--color-primary);
+    color: var(--color-text-accent-button);
+
+    &:hover {
+        filter: brightness(1.08);
+    }
+
+    &:focus-visible {
+        outline: 0.2rem solid var(--color-text-accent-button);
+        outline-offset: 0.2rem;
+    }
+}
