@@ -17,3 +17,11 @@
         outline: 0.1rem solid var(--color-border);
     }
 }
+
+.textarea {
+    height: auto;
+    min-height: 7.2rem;
+    padding-block: 0.8rem;
+    line-height: 2.2rem;
+    resize: vertical;
+}

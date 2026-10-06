@@ -69,3 +69,25 @@
     font-size: 1.5rem;
     color: var(--color-text-secondary);
 }
+
+.dialogContent {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+}
+
+.textArea {
+    max-height: 20rem;
+}
+
+.actions {
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.error {
+    flex: 1 1 100%;
+    font-size: 1.4rem;
+    line-height: 1.4;
+    color: var(--color-system-red);
+}
