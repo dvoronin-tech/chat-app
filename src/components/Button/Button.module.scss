@@ -2,10 +2,45 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1.6rem;
+    padding: 1rem 1.8rem;
+    border-radius: 0.8rem;
 }
 
 .primary {
     background-color: var(--color-primary);
+    color: var(--color-text-accent-button);
+
+    &:hover {
+        filter: brightness(1.08);
+    }
+
+    &:focus-visible {
+        outline: 0.2rem solid var(--color-text-accent-button);
+        outline-offset: 0.2rem;
+    }
+}
+
+.simple {
+    background-color: transparent;
+    color: var(--color-text-main);
+
+    &:hover {
+        background-color: color-mix(
+            in srgb,
+            var(--color-text-main) 30%,
+            transparent
+        );
+    }
+
+    &:focus-visible {
+        outline: 0.2rem solid var(--color-border);
+        outline-offset: 0.2rem;
+    }
+}
+
+.red {
+    background-color: var(--color-system-red);
     color: var(--color-text-accent-button);
 
     &:hover {
