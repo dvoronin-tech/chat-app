@@ -2,42 +2,93 @@
 *::before,
 *::after {
     box-sizing: border-box;
-}
-
-* {
     margin: 0;
     padding: 0;
 }
 
+svg {
+    path {
+        fill: currentColor;
+    }
+
+    path[fill='none'] {
+        fill: none;
+    }
+}
+
 html {
-    height: 100%;
+    overflow: hidden;
+    font-size: 10px;
+    -webkit-text-size-adjust: 100%;
+    background-color: var(--color-bg-main);
 }
 
 body {
     min-height: 100%;
+    line-height: inherit;
+    font-family: var(--font-family);
+    color: var(--color-text-main);
+    background-color: var(--color-bg-main);
 }
 
 img,
 picture,
-svg,
 video,
-canvas {
+canvas,
+svg {
     display: block;
     max-width: 100%;
 }
 
-button,
 input,
+button,
 textarea,
 select {
     font: inherit;
     color: inherit;
-}
-
-button {
     background: none;
     border: none;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    box-shadow: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+input:focus,
+button:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+}
+
+button::-moz-focus-inner,
+input::-moz-focus-inner {
+    border: 0;
+    padding: 0;
+}
+
+input::-webkit-search-decoration,
+input::-webkit-search-cancel-button,
+input::-webkit-search-results-button,
+input::-webkit-search-results-decoration {
+    display: none;
+}
+
+textarea {
+    resize: vertical;
+}
+
+button,
+input[type='button'],
+input[type='submit'],
+input[type='reset'] {
     cursor: pointer;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
 }
 
 ul,
@@ -45,7 +96,72 @@ ol {
     list-style: none;
 }
 
-a {
-    color: inherit;
-    text-decoration: none;
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+p {
+    margin: 0;
+}
+
+:root {
+    --font-family: 'Nunito', sans-serif;
+
+    --color-primary: #1072f2;
+    --color-text-accent-button: #ffffff;
+    --color-bg-main: #101010;
+    --color-bg-ui: #191918;
+
+    --color-text-main: #ffffff;
+    --color-text-secondary: #bbb7b7;
+
+    --color-border: #544d4d;
+
+    --color-system-red: #cf3116;
+    --color-system-green: #167b0d;
+    --color-system-blue: #0e6ecc;
+}
+
+/* Scrollbar Styles */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.1s ease;
+}
+
+*:hover {
+    scrollbar-color: var(--color-border) var(--color-bg-main);
+}
+
+*:hover {
+    scrollbar-color: var(--color-border) var(--color-bg-main);
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-button {
+    display: none;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 20px;
+    border: 2px solid transparent;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border: 2px solid var(--color-bg-main);
+}
+
+*:hover::-webkit-scrollbar-track {
+    background: var(--color-bg-main);
 }

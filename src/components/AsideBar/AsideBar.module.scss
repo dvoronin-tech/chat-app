@@ -1,0 +1,57 @@
+.root {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+    width: 42rem;
+    height: 100vh;
+    padding: 1.6rem 1.4rem 0;
+    background-color: var(--color-bg-ui);
+    color: var(--color-text-main);
+    font-family: var(--font-family);
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 4rem;
+}
+
+.title {
+    font-size: 2.8rem;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+}
+
+.add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 50%;
+    background-color: var(--color-primary);
+    color: var(--color-text-accent-button);
+
+    svg {
+        width: 2.2rem;
+        height: 2.2rem;
+    }
+
+    &:hover {
+        filter: brightness(1.08);
+    }
+
+    &:focus-visible {
+        outline: 0.2rem solid var(--color-text-accent-button);
+        outline-offset: 0.2rem;
+    }
+}
+
+.headerControls {
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+}
