@@ -1,11 +1,6 @@
 import axios from 'axios';
-import type {
-    ChatPayload,
-    GreenApiChat,
-    GreenApiCredentials,
-    HistoryMessage,
-    Method,
-} from './greenApi.types';
+import { useAuthStore } from '../store/authStore';
+import type { ChatPayload, GreenApiChat, Method } from './greenApi.types';
 
 const API_URL = 'https://api.greenapi.com';
 
@@ -18,42 +13,6 @@ export const api = axios.create({
 
 export function isRequestCanceled(error: unknown) {
     return axios.isCancel(error);
-}
-
-const MESSAGE_LABELS: Record<string, string> = {
-    imageMessage: 'Photo',
-    videoMessage: 'Video',
-    documentMessage: 'Document',
-    audioMessage: 'Audio',
-    stickerMessage: 'Sticker',
-    reactionMessage: 'Reaction',
-    locationMessage: 'Location',
-    contactMessage: 'Contact',
-    contactsArrayMessage: 'Contacts',
-    pollMessage: 'Poll',
-    pollUpdateMessage: 'Poll',
-};
-
-function methodUrl(credentials: GreenApiCredentials, method: Method) {
-    return `/waInstance${credentials.idInstance}/${method}/${credentials.apiTokenInstance}`;
-}
-
-async function request<T>(
-    url: string,
-    config?: {
-        method?: 'GET' | 'POST';
-        data?: unknown;
-        signal?: AbortSignal;
-    },
-) {
-    const response = await api.request<T>({
-        url,
-        method: config?.method ?? 'GET',
-        data: config?.data,
-        signal: config?.signal,
-    });
-
-    return response.data;
 }
 
 function parseChat(value: unknown): GreenApiChat | null {
@@ -74,67 +33,66 @@ function parseChat(value: unknown): GreenApiChat | null {
     };
 }
 
-function firstText(...values: unknown[]) {
-    for (const value of values) {
-        if (typeof value === 'string' && value.trim()) return value.trim();
+export class GreenApi {
+    private static instance: GreenApi | null = null;
+
+    private constructor() {}
+
+    static getInstance() {
+        GreenApi.instance ??= new GreenApi();
+        return GreenApi.instance;
     }
 
-    return '';
-}
+    async getChats(signal?: AbortSignal) {
+        const payload = await this.request<unknown>(
+            this.methodUrl('getChats'),
+            {
+                signal,
+            },
+        );
 
-function previewFromMessage(message: HistoryMessage) {
-    if (message.isDeleted === true) return 'Deleted';
+        if (!Array.isArray(payload)) {
+            throw new Error('Unexpected chats response');
+        }
 
-    const text = firstText(
-        message.textMessage,
-        message.caption,
-        message.fileName,
-    );
-    if (text) return text;
-
-    if (typeof message.typeMessage === 'string') {
-        return MESSAGE_LABELS[message.typeMessage] ?? '';
+        return payload.flatMap((item) => {
+            const chat = parseChat(item);
+            return chat ? [chat] : [];
+        });
     }
 
-    return '';
-}
-
-export async function getChats(
-    credentials: GreenApiCredentials,
-    signal?: AbortSignal,
-) {
-    const payload = await request<unknown>(methodUrl(credentials, 'getChats'), {
-        signal,
-    });
-
-    if (!Array.isArray(payload)) {
-        throw new Error('Unexpected chats response');
+    private methodUrl(method: Method) {
+        const { idInstance, apiTokenInstance } = this.requireCredentials();
+        return `/waInstance${idInstance}/${method}/${apiTokenInstance}`;
     }
 
-    return payload.flatMap((item) => {
-        const chat = parseChat(item);
-        return chat ? [chat] : [];
-    });
-}
+    private requireCredentials() {
+        const credentials = useAuthStore.getState().credentials;
 
-export async function getLastMessageText(
-    credentials: GreenApiCredentials,
-    chatId: string,
-    signal?: AbortSignal,
-) {
-    const payload = await request<unknown>(
-        methodUrl(credentials, 'getChatHistory'),
-        {
-            method: 'POST',
-            data: { chatId, count: 1 },
-            signal,
+        if (!credentials) {
+            throw new Error('Green API credentials are not set');
+        }
+
+        return credentials;
+    }
+
+    private async request<T>(
+        url: string,
+        config?: {
+            method?: 'GET' | 'POST';
+            data?: unknown;
+            signal?: AbortSignal;
         },
-    );
+    ) {
+        const response = await api.request<T>({
+            url,
+            method: config?.method ?? 'GET',
+            data: config?.data,
+            signal: config?.signal,
+        });
 
-    if (!Array.isArray(payload) || payload.length === 0) return '';
-
-    const message = payload[0];
-    if (typeof message !== 'object' || message === null) return '';
-
-    return previewFromMessage(message);
+        return response.data;
+    }
 }
+
+export const greenApi = GreenApi.getInstance();

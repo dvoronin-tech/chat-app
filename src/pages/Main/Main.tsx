@@ -12,7 +12,7 @@ export default function Main() {
         if (!credentials) return;
 
         const controller = new AbortController();
-        void loadChats(credentials, controller.signal);
+        void loadChats(controller.signal);
 
         return () => controller.abort();
     }, [credentials, loadChats]);

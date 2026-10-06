@@ -3,7 +3,6 @@ import styles from './ChatCard.module.scss';
 
 type ChatCardProps = {
     name: string;
-    lastMessage: string;
 };
 
 function chatInitial(name: string) {
@@ -11,16 +10,13 @@ function chatInitial(name: string) {
     return letter ? letter.toLocaleUpperCase() : '?';
 }
 
-function ChatCard({ name, lastMessage }: ChatCardProps) {
+function ChatCard({ name }: ChatCardProps) {
     return (
         <article className={styles.root}>
             <div className={styles.avatar} aria-hidden="true">
                 {chatInitial(name)}
             </div>
-            <div className={styles.body}>
-                <p className={styles.name}>{name}</p>
-                <p className={styles.preview}>{lastMessage || '\u00a0'}</p>
-            </div>
+            <p className={styles.name}>{name}</p>
         </article>
     );
 }

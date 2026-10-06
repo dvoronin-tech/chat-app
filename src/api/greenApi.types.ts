@@ -19,12 +19,4 @@ export type ChatPayload = {
     archive?: boolean;
 };
 
-export type HistoryMessage = {
-    typeMessage?: unknown;
-    textMessage?: unknown;
-    caption?: unknown;
-    fileName?: unknown;
-    isDeleted?: unknown;
-};
-
-export type Method = 'getChats' | 'getChatHistory';
+export type Method = 'getChats';

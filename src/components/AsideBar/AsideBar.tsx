@@ -9,7 +9,7 @@ import Button from '../Button/Button';
 import ChatCard from '../ChatCard/ChatCard';
 import Input from '../Input/Input';
 import styles from './AsideBar.module.scss';
-import Dialog from '../Dialog/Dialog.tsx';
+import AsideBarDialog from './AsideBarDialog';
 import { useShallow } from 'zustand/react/shallow';
 
 export default function AsideBar() {
@@ -59,28 +59,10 @@ export default function AsideBar() {
                 }
             </aside>
             {isAddChatModalOpen && (
-                <Dialog
+                <AsideBarDialog
                     open={isAddChatModalOpen}
                     onOpenChange={setIsAddChatModalOpen}
-                >
-                    <Dialog.Title>Create new chat</Dialog.Title>
-                    <Dialog.Description>
-                        Enter the phone number of the person you want to write
-                        to
-                    </Dialog.Description>
-                    <div className={styles.content}></div>
-                    <Dialog.Actions>
-                        <Button
-                            onClick={() => {
-                                setIsAddChatModalOpen(false);
-                            }}
-                            variant="simple"
-                        >
-                            Close
-                        </Button>
-                        <Button variant="primary">Create</Button>
-                    </Dialog.Actions>
-                </Dialog>
+                />
             )}
         </>
     );
@@ -101,11 +83,7 @@ const ChatList: FC<ChatListProps> = memo(({ status, chats, error }) => {
     return (
         <div className={styles.list}>
             {chats.map((chat) => (
-                <ChatCard
-                    key={chat.id}
-                    name={chat.name}
-                    lastMessage={chat.lastMessage}
-                />
+                <ChatCard key={chat.id} name={chat.name} />
             ))}
         </div>
     );
