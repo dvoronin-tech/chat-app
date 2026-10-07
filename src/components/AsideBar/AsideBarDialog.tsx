@@ -1,8 +1,11 @@
+import { type ChangeEvent, useState } from 'react';
+import { useSendMessage } from '../../hooks/useSendMessage.ts';
+import { useChatsStore } from '../../store/chatsStore';
+import { formatPhoneNumber } from '../../utils/formatPhoneNumber.ts';
 import Button from '../Button/Button';
 import Dialog from '../Dialog/Dialog.tsx';
-import styles from './AsideBar.module.scss';
 import Input from '../Input/Input.tsx';
-import { type ChangeEvent, useState } from 'react';
+import styles from './AsideBar.module.scss';
 
 interface AsideBarDialogProps {
     open: boolean;
@@ -13,12 +16,49 @@ export default function AsideBarDialog({
     open,
     onOpenChange,
 }: AsideBarDialogProps) {
+    const loadChats = useChatsStore((state) => state.loadChats);
     const [phoneNumber, setPhoneNumber] = useState('');
     const [message, setMessage] = useState('');
-    const [errorMessage, setErrorMessage] = useState('');
+    const [validationError, setValidationError] = useState('');
+    const { isPending, errorMessage, onSubmit } = useSendMessage({
+        onSuccess: () => {
+            onOpenChange(false);
+            void loadChats();
+        },
+    });
 
     const onSendMessage = () => {
-        if (!phoneNumber) return setErrorMessage('Phone number is required');
+        if (isPending) return;
+
+        if (!phoneNumber.trim()) {
+            setValidationError('Phone number is required');
+            return;
+        }
+
+        const formattedPhoneNumber = formatPhoneNumber(phoneNumber.trim());
+
+        if (!formattedPhoneNumber) {
+            setValidationError('Invalid phone number');
+            return;
+        }
+
+        const trimmedMessage = message.trim();
+
+        if (!trimmedMessage) {
+            setValidationError('Message is required');
+            return;
+        }
+
+        if (trimmedMessage.length >= 4000) {
+            setValidationError('Message must be less then 4000 characters');
+            return;
+        }
+
+        setValidationError('');
+        void onSubmit({
+            recipientsPhoneNumber: formattedPhoneNumber,
+            message: trimmedMessage,
+        });
     };
 
     const handleChange = (
@@ -27,11 +67,19 @@ export default function AsideBarDialog({
         const target = event.target;
         const { name, value } = target;
 
-        setErrorMessage('');
+        setValidationError('');
 
         if (name === 'phone') setPhoneNumber(value);
-        if (name === 'message') setMessage(value);
+        if (name === 'message') {
+            if (value.trim().length >= 4000)
+                return setValidationError(
+                    'Message must be less then 4000 characters',
+                );
+            setMessage(value);
+        }
     };
+
+    const visibleError = validationError || errorMessage;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -46,6 +94,7 @@ export default function AsideBarDialog({
                     type="tel"
                     value={phoneNumber}
                     onChange={handleChange}
+                    disabled={isPending}
                 />
                 <Input
                     name="message"
@@ -54,13 +103,15 @@ export default function AsideBarDialog({
                     className={styles.textArea}
                     onChange={handleChange}
                     value={message}
+                    disabled={isPending}
                 />
-                {errorMessage && (
-                    <span className={styles.error}>{errorMessage}</span>
+                {visibleError && (
+                    <span className={styles.error}>{visibleError}</span>
                 )}
             </div>
             <Dialog.Actions className={styles.actions}>
                 <Button
+                    type="button"
                     onClick={() => {
                         onOpenChange(false);
                     }}
@@ -68,8 +119,13 @@ export default function AsideBarDialog({
                 >
                     Close
                 </Button>
-                <Button variant="primary" onClick={onSendMessage}>
-                    Send
+                <Button
+                    type="button"
+                    variant="primary"
+                    onClick={onSendMessage}
+                    disabled={isPending}
+                >
+                    {isPending ? 'Sending' : 'Send'}
                 </Button>
             </Dialog.Actions>
         </Dialog>

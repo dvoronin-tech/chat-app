@@ -1,6 +1,12 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
-import type { ChatPayload, GreenApiChat, Method } from './greenApi.types';
+import type {
+    ChatPayload,
+    GreenApiChat,
+    Method,
+    SendMessagePayload,
+    SendMessageResponse,
+} from './greenApi.types';
 
 const API_URL = 'https://api.greenapi.com';
 
@@ -13,6 +19,20 @@ export const api = axios.create({
 
 export function isRequestCanceled(error: unknown) {
     return axios.isCancel(error);
+}
+
+function parseMessageId(value: unknown) {
+    if (typeof value !== 'object' || value === null) return null;
+
+    const response = value as SendMessageResponse;
+    if (
+        typeof response.idMessage !== 'string' ||
+        response.idMessage.length === 0
+    ) {
+        return null;
+    }
+
+    return response.idMessage;
 }
 
 function parseChat(value: unknown): GreenApiChat | null {
@@ -59,6 +79,24 @@ export class GreenApi {
             const chat = parseChat(item);
             return chat ? [chat] : [];
         });
+    }
+
+    async sendMessage({ recipientsPhoneNumber, message }: SendMessagePayload) {
+        const payload = await this.request<unknown>(
+            this.methodUrl('sendMessage'),
+            {
+                method: 'POST',
+                data: { chatId: recipientsPhoneNumber, message },
+            },
+        );
+
+        const idMessage = parseMessageId(payload);
+
+        if (!idMessage) {
+            throw new Error('Unexpected send message response');
+        }
+
+        return idMessage;
     }
 
     private methodUrl(method: Method) {

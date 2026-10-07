@@ -19,4 +19,13 @@ export type ChatPayload = {
     archive?: boolean;
 };
 
-export type Method = 'getChats';
+export type SendMessagePayload = {
+    recipientsPhoneNumber: string;
+    message: string;
+};
+
+export type SendMessageResponse = {
+    idMessage?: string;
+};
+
+export type Method = 'getChats' | 'sendMessage';
