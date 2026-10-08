@@ -1,7 +1,8 @@
-import { type FC, memo, useState } from 'react';
+import { type FC, memo, useMemo, useState } from 'react';
 import PlusIcon from '../../assets/plus.svg?react';
 import type { GreenApiChat } from '../../api/greenApi.types';
 import { useGetChats } from '../../api/chats/getChats';
+import { chatFromId } from '../../api/parsers/parseChat';
 import { useChatsStore } from '../../store/chatsStore';
 import Button from '../Button/Button';
 import ChatCard from '../ChatCard/ChatCard';
@@ -21,12 +22,25 @@ export default function AsideBar() {
         refetch,
     } = useGetChats();
 
+    const selectedChatId = useChatsStore((state) => state.selectedChatId);
+    const chatsWithSelected = useMemo(() => {
+        if (
+            !selectedChatId ||
+            chats.some((chat) => chat.id === selectedChatId)
+        ) {
+            return chats;
+        }
+
+        return [chatFromId(selectedChatId), ...chats];
+    }, [chats, selectedChatId]);
     const normalizedQuery = query.trim().toLocaleLowerCase();
-    const visibleChats = normalizedQuery
-        ? chats.filter((chat) =>
-              chat.name.toLocaleLowerCase().includes(normalizedQuery),
-          )
-        : chats;
+    const visibleChats = useMemo(() => {
+        if (!normalizedQuery) return chatsWithSelected;
+
+        return chatsWithSelected.filter((chat) =>
+            chat.name.toLocaleLowerCase().includes(normalizedQuery),
+        );
+    }, [chatsWithSelected, normalizedQuery]);
 
     return (
         <>

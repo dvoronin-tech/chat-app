@@ -16,6 +16,7 @@ import { useChatsStore } from '../../store/chatsStore';
 import { useAuthStore } from '../../store/authStore';
 import { useGetChats } from '../../api/chats/getChats';
 import { useGetChatHistory } from '../../api/messages/getChatHistory';
+import { chatFromId } from '../../api/parsers/parseChat';
 import { useSendMessage } from '../../api/messages/sendMessage';
 import { formatMessageTime, messageDate } from '../../utils/messageTime';
 import Button from '../Button/Button';
@@ -26,10 +27,14 @@ export default function ChatView() {
     const selectedChatId = useChatsStore((state) => state.selectedChatId);
     const credentials = useAuthStore((state) => state.credentials);
     const { data: chats = [] } = useGetChats();
-    const chat = useMemo(
-        () => chats.find((item) => item.id === selectedChatId) ?? null,
-        [selectedChatId],
-    );
+    const chat = useMemo(() => {
+        if (!selectedChatId) return null;
+
+        return (
+            chats.find((item) => item.id === selectedChatId) ??
+            chatFromId(selectedChatId)
+        );
+    }, [chats, selectedChatId]);
     const {
         data: messages = [],
         isFetching,

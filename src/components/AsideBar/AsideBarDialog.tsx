@@ -1,6 +1,8 @@
 import { type ChangeEvent, useState } from 'react';
-import { useSendMessage } from '../../api/messages/sendMessage';
+import { useCheckWhatsapp } from '../../api/chats/checkWhatsapp';
+import { useGetChats } from '../../api/chats/getChats';
 import { useAuthStore } from '../../store/authStore';
+import { useChatsStore } from '../../store/chatsStore';
 import { formatPhoneNumber } from '../../utils/formatPhoneNumber.ts';
 import Button from '../Button/Button';
 import Dialog from '../Dialog/Dialog.tsx';
@@ -17,12 +19,18 @@ export default function AsideBarDialog({
     onOpenChange,
 }: AsideBarDialogProps) {
     const credentials = useAuthStore((state) => state.credentials);
+    const selectChat = useChatsStore((state) => state.selectChat);
+    const { data: chats = [] } = useGetChats();
     const [phoneNumber, setPhoneNumber] = useState('');
-    const [message, setMessage] = useState('');
     const [validationError, setValidationError] = useState('');
-    const { isPending, error, mutate } = useSendMessage();
+    const { isPending, error, mutate } = useCheckWhatsapp();
 
-    const onSendMessage = () => {
+    const openChat = (chatId: string) => {
+        selectChat(chatId);
+        onOpenChange(false);
+    };
+
+    const onOpenChat = () => {
         if (isPending || !credentials) return;
 
         if (!phoneNumber.trim()) {
@@ -37,52 +45,46 @@ export default function AsideBarDialog({
             return;
         }
 
-        const trimmedMessage = message.trim();
-
-        if (!trimmedMessage) {
-            setValidationError('Message is required');
-            return;
-        }
-
-        if (trimmedMessage.length >= 4000) {
-            setValidationError('Message must be less then 4000 characters');
-            return;
-        }
+        const digits = formattedPhoneNumber.split('@')[0];
+        const existing = chats.find(
+            (chat) =>
+                chat.id === formattedPhoneNumber ||
+                chat.id.split('@')[0] === digits,
+        );
 
         setValidationError('');
+        if (existing) {
+            openChat(existing.id);
+            return;
+        }
+
         mutate(
+            { credentials, phoneNumber: digits },
             {
-                credentials,
-                recipientsPhoneNumber: formattedPhoneNumber,
-                message: trimmedMessage,
+                onSuccess: (exists) => {
+                    if (!exists) {
+                        setValidationError(
+                            'This phone number is not on WhatsApp',
+                        );
+                        return;
+                    }
+
+                    openChat(formattedPhoneNumber);
+                },
             },
-            { onSuccess: () => onOpenChange(false) },
         );
     };
 
-    const handleChange = (
-        event: ChangeEvent<HTMLInputElement> | ChangeEvent<HTMLTextAreaElement>,
-    ) => {
-        const target = event.target;
-        const { name, value } = target;
-
+    const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
         setValidationError('');
-
-        if (name === 'phone') setPhoneNumber(value);
-        if (name === 'message') {
-            if (value.trim().length >= 4000)
-                return setValidationError(
-                    'Message must be less then 4000 characters',
-                );
-            setMessage(value);
-        }
+        setPhoneNumber(event.target.value);
     };
 
     const visibleError = validationError || error?.message;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <Dialog.Title>Create new chat</Dialog.Title>
+            <Dialog.Title>Open chat</Dialog.Title>
             <Dialog.Description>
                 Enter the phone number of the person you want to write to
             </Dialog.Description>
@@ -93,15 +95,6 @@ export default function AsideBarDialog({
                     type="tel"
                     value={phoneNumber}
                     onChange={handleChange}
-                    disabled={isPending}
-                />
-                <Input
-                    name="message"
-                    placeholder="Enter message"
-                    as="textarea"
-                    className={styles.textArea}
-                    onChange={handleChange}
-                    value={message}
                     disabled={isPending}
                 />
                 {visibleError && (
@@ -121,10 +114,10 @@ export default function AsideBarDialog({
                 <Button
                     type="button"
                     variant="primary"
-                    onClick={onSendMessage}
+                    onClick={onOpenChat}
                     disabled={isPending}
                 >
-                    {isPending ? 'Sending' : 'Send'}
+                    {isPending ? 'Opening' : 'Open'}
                 </Button>
             </Dialog.Actions>
         </Dialog>

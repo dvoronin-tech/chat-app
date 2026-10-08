@@ -30,6 +30,7 @@ export type ChatMessage = {
 
 export type Method =
     | 'getChats'
+    | 'checkWhatsapp'
     | 'sendMessage'
     | 'getChatHistory'
     | 'getMessage'

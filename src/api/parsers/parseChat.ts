@@ -30,3 +30,15 @@ export function parseChat(value: unknown): GreenApiChat | null {
         archive: !!chat.archive,
     };
 }
+
+export function chatFromId(id: string): GreenApiChat {
+    const local = id.split('@')[0] || id;
+
+    return {
+        id,
+        name: local,
+        type: id.endsWith('@g.us') ? 'group' : 'user',
+        unreadCount: 0,
+        archive: false,
+    };
+}
