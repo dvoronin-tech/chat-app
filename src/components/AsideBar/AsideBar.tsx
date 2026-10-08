@@ -16,8 +16,8 @@ export default function AsideBar() {
     const [query, setQuery] = useState('');
     const {
         data: chats = [],
-        isFetching,
-        isError,
+        isLoading,
+        isLoadingError,
         error,
         refetch,
     } = useGetChats();
@@ -52,7 +52,7 @@ export default function AsideBar() {
                             <Button
                                 type="button"
                                 variant="simple"
-                                disabled={isFetching}
+                                disabled={isLoading}
                                 onClick={() => void refetch()}
                             >
                                 Обновить
@@ -76,14 +76,13 @@ export default function AsideBar() {
                         aria-label="Найти"
                     />
                 </div>
-                {
-                    <ChatList
-                        chats={visibleChats}
-                        isLoading={isFetching}
-                        isError={isError}
-                        error={error?.message ?? null}
-                    />
-                }
+
+                <ChatList
+                    chats={visibleChats}
+                    isLoading={isLoading}
+                    isError={isLoadingError}
+                    error={error?.message ?? null}
+                />
             </aside>
             {isAddChatModalOpen && (
                 <AsideBarDialog

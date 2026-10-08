@@ -5,6 +5,7 @@ import type {
     GreenApiCredentials,
     SendMessagePayload,
 } from '../greenApi.types';
+import { chatsQueryKey } from '../chats/getChats';
 import { parseMessageId } from '../parsers/parseMessageId';
 import { chatHistoryQueryKey, type CachedChatMessage } from './getChatHistory';
 
@@ -56,7 +57,11 @@ export const useSendMessage = () => {
 
             return { queryKey, optimistic };
         },
-        onSuccess: async (idMessage, _request, context) => {
+        onSuccess: async (idMessage, request, context) => {
+            void queryClient.invalidateQueries({
+                queryKey: chatsQueryKey(request.credentials),
+            });
+
             if (!context) return;
             const { queryKey, optimistic } = context;
 
