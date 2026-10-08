@@ -1,7 +1,33 @@
 .root {
     display: flex;
-    height: 100vh;
+    height: 100%;
+    overflow: hidden;
     background-color: var(--color-bg-main);
     color: var(--color-text-main);
     font-family: var(--font-family);
+}
+
+.sidebar {
+    display: flex;
+    flex-shrink: 0;
+    width: 36rem;
+    height: 100%;
+}
+
+.thread {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+}
+
+@media (max-width: 840px) {
+    .sidebar {
+        width: 100%;
+    }
+
+    .chatOpen .sidebar,
+    .root:not(.chatOpen) .thread {
+        display: none;
+    }
 }

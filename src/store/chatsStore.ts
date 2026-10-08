@@ -3,7 +3,7 @@ import { devtools } from 'zustand/middleware';
 
 type ChatsState = {
     selectedChatId: string | null;
-    selectChat: (chatId: string) => void;
+    selectChat: (chatId: string | null) => void;
 };
 
 export const useChatsStore = create<ChatsState>()(

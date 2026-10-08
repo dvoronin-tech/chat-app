@@ -17,7 +17,7 @@ const fetchChats = async (
     );
 
     if (!Array.isArray(data)) throw new Error('Unexpected chats response');
-
+    debugger;
     return data.flatMap((item) => {
         const chat = parseChat(item);
         return chat ? [chat] : [];

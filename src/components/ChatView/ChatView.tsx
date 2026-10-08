@@ -19,12 +19,14 @@ import { useGetChatHistory } from '../../api/messages/getChatHistory';
 import { chatFromId } from '../../api/parsers/parseChat';
 import { useSendMessage } from '../../api/messages/sendMessage';
 import { formatMessageTime, messageDate } from '../../utils/messageTime';
+import Avatar from '../Avatar/Avatar';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
 import styles from './ChatView.module.scss';
 
 export default function ChatView() {
     const selectedChatId = useChatsStore((state) => state.selectedChatId);
+    const selectChat = useChatsStore((state) => state.selectChat);
     const credentials = useAuthStore((state) => state.credentials);
     const { data: chats = [] } = useGetChats();
     const chat = useMemo(() => {
@@ -37,7 +39,7 @@ export default function ChatView() {
     }, [chats, selectedChatId]);
     const {
         data: messages = [],
-        isFetching,
+        isLoading,
         isError,
         isSuccess,
         error,
@@ -48,7 +50,15 @@ export default function ChatView() {
     if (!chat) {
         return (
             <section className={styles.root}>
-                <p className={styles.placeholder}>Выберите чат</p>
+                <div className={styles.empty}>
+                    <span className={styles.emptyGlyph} aria-hidden="true">
+                        <ChatMark />
+                    </span>
+                    <p className={styles.emptyTitle}>Выберите чат</p>
+                    <p className={styles.emptyHint}>
+                        Переписка откроется здесь
+                    </p>
+                </div>
             </section>
         );
     }
@@ -59,27 +69,40 @@ export default function ChatView() {
     return (
         <section className={styles.root} aria-label={activeChat.name}>
             <header className={styles.header}>
-                <h2 className={styles.title}>{activeChat.name}</h2>
-                <Button
+                <button
                     type="button"
-                    variant="simple"
-                    className={styles.refresh}
-                    disabled={isFetching}
-                    onClick={() => void refetch()}
+                    className={styles.back}
+                    aria-label="К чатам"
+                    onClick={() => selectChat(null)}
                 >
-                    Обновить
-                </Button>
+                    <BackIcon />
+                </button>
+                <Avatar
+                    name={activeChat.name}
+                    rounded={
+                        activeChat.type === 'group' ? 'squircle' : 'circle'
+                    }
+                />
+                <div className={styles.heading}>
+                    <h2 className={styles.title}>{activeChat.name}</h2>
+                    <p className={styles.subtitle}>
+                        {activeChat.type === 'group' ? 'Группа' : 'Личный чат'}
+                    </p>
+                </div>
             </header>
-            <MessageList
-                isLoading={isFetching}
-                isError={isError}
-                messages={messages}
-                error={error?.message ?? null}
-                showSender={showSender}
-            />
+            <div className={styles.canvas}>
+                <MessageList
+                    isLoading={isLoading}
+                    isError={isError}
+                    messages={messages}
+                    error={error?.message ?? null}
+                    showSender={showSender}
+                    onRetry={() => void refetch()}
+                />
+            </div>
             <Composer
                 key={activeChat.id}
-                canSend={isSuccess && !isFetching}
+                canSend={isSuccess}
                 onSend={async (text) => {
                     if (!credentials) return;
 
@@ -129,6 +152,7 @@ function Composer({
         <form className={styles.composer} onSubmit={handleSubmit}>
             <div className={styles.field}>
                 <Input
+                    className={styles.composerInput}
                     value={draft}
                     onChange={(event) => {
                         setDraft(event.target.value);
@@ -140,15 +164,15 @@ function Composer({
                     enterKeyHint="send"
                     maxLength={4000}
                 />
+                <Button
+                    type="submit"
+                    className={styles.send}
+                    aria-label="Отправить"
+                    disabled={submitDisabled}
+                >
+                    <SendIcon />
+                </Button>
             </div>
-            <Button
-                type="submit"
-                className={styles.send}
-                aria-label="Отправить"
-                disabled={submitDisabled}
-            >
-                <SendIcon />
-            </Button>
             {sendError && <p className={styles.sendError}>{sendError}</p>}
         </form>
     );
@@ -160,10 +184,11 @@ interface MessageListProps {
     messages: ChatMessage[];
     error: string | null;
     showSender: boolean;
+    onRetry: () => void;
 }
 
 const MessageList: FC<MessageListProps> = memo(
-    ({ isLoading, isError, messages, error, showSender }) => {
+    ({ isLoading, isError, messages, error, showSender, onRetry }) => {
         const listRef = useRef<HTMLDivElement>(null);
 
         useEffect(() => {
@@ -173,62 +198,136 @@ const MessageList: FC<MessageListProps> = memo(
             list.scrollTop = list.scrollHeight;
         }, [messages, isLoading, isError]);
 
-        if (isLoading) return <p className={styles.placeholder}>Загрузка</p>;
-        if (isError) return <p className={styles.placeholder}>{error}</p>;
-        if (messages.length === 0)
-            return <p className={styles.placeholder}>Нет сообщений</p>;
+        if (isLoading) {
+            return (
+                <div className={styles.list} aria-busy="true">
+                    <span className={styles.srOnly}>Загрузка</span>
+                    <div className={styles.spacer} />
+                    <span className={styles.bubbleSkeleton} />
+                    <span
+                        className={clsx(
+                            styles.bubbleSkeleton,
+                            styles.bubbleRight,
+                        )}
+                    />
+                    <span
+                        className={clsx(styles.bubbleSkeleton, styles.bubbleWide)}
+                    />
+                </div>
+            );
+        }
+
+        if (isError) {
+            return (
+                <div className={styles.empty}>
+                    <p className={styles.emptyTitle}>
+                        Не удалось загрузить сообщения
+                    </p>
+                    <p className={clsx(styles.emptyHint, styles.danger)}>
+                        {error}
+                    </p>
+                    <button
+                        type="button"
+                        className={styles.retry}
+                        onClick={onRetry}
+                    >
+                        Повторить
+                    </button>
+                </div>
+            );
+        }
+
+        if (messages.length === 0) {
+            return (
+                <div className={styles.empty}>
+                    <p className={styles.emptyTitle}>Пока пусто</p>
+                    <p className={styles.emptyHint}>
+                        Напишите первое сообщение
+                    </p>
+                </div>
+            );
+        }
 
         return (
             <div className={styles.list} ref={listRef}>
                 <div className={styles.spacer} />
-                {messages.map((message) => (
-                    <article
-                        key={message.id}
-                        className={clsx(
-                            styles.message,
-                            styles[message.direction],
-                        )}
-                    >
-                        {showSender &&
-                            message.direction === 'incoming' &&
-                            message.senderName && (
-                                <p className={styles.sender}>
-                                    {message.senderName}
-                                </p>
+                {messages.map((message, index) => {
+                    const groupedWithPrevious = isSameGroup(
+                        messages[index - 1],
+                        message,
+                    );
+                    const groupedWithNext = isSameGroup(
+                        message,
+                        messages[index + 1],
+                    );
+
+                    return (
+                        <article
+                            key={message.id}
+                            className={clsx(
+                                styles.message,
+                                styles[message.direction],
+                                groupedWithPrevious &&
+                                    styles.groupedWithPrevious,
+                                groupedWithNext && styles.groupedWithNext,
                             )}
-                        {message.imageUrl && (
-                            <img
-                                className={styles.media}
-                                src={message.imageUrl}
-                                alt={message.text || 'Изображение'}
-                            />
-                        )}
-                        {message.text && (
-                            <p className={styles.text}>{message.text}</p>
-                        )}
-                        {(message.timestamp > 0 || message.deliveryStatus) && (
-                            <div className={styles.meta}>
-                                {message.timestamp > 0 && (
-                                    <time
-                                        className={styles.time}
-                                        dateTime={messageDate(
-                                            message.timestamp,
-                                        ).toISOString()}
-                                    >
-                                        {formatMessageTime(message.timestamp)}
-                                    </time>
+                        >
+                            {showSender &&
+                                !groupedWithPrevious &&
+                                message.direction === 'incoming' &&
+                                message.senderName && (
+                                    <p className={styles.sender}>
+                                        {message.senderName}
+                                    </p>
                                 )}
-                                {message.deliveryStatus && (
-                                    <Receipt status={message.deliveryStatus} />
-                                )}
-                            </div>
-                        )}
-                    </article>
-                ))}
+                            {message.imageUrl && (
+                                <img
+                                    className={styles.media}
+                                    src={message.imageUrl}
+                                    alt={message.text || 'Изображение'}
+                                />
+                            )}
+                            {message.text && (
+                                <p className={styles.text}>{message.text}</p>
+                            )}
+                            {(message.timestamp > 0 ||
+                                message.deliveryStatus) && (
+                                <div className={styles.meta}>
+                                    {message.timestamp > 0 && (
+                                        <time
+                                            className={styles.time}
+                                            dateTime={messageDate(
+                                                message.timestamp,
+                                            ).toISOString()}
+                                        >
+                                            {formatMessageTime(
+                                                message.timestamp,
+                                            )}
+                                        </time>
+                                    )}
+                                    {message.deliveryStatus && (
+                                        <Receipt
+                                            status={message.deliveryStatus}
+                                        />
+                                    )}
+                                </div>
+                            )}
+                        </article>
+                    );
+                })}
             </div>
         );
     },
 );
+
+function isSameGroup(left?: ChatMessage, right?: ChatMessage) {
+    if (!left || !right) return false;
+
+    return (
+        left.direction === right.direction &&
+        left.senderName === right.senderName
+    );
+}
 
 const RECEIPT_LABEL: Record<MessageDeliveryStatus, string> = {
     sending: 'Отправляется',
@@ -245,6 +344,35 @@ function Receipt({ status }: { status: MessageDeliveryStatus }) {
         >
             {status === 'sending' ? <ClockIcon /> : <CheckIcon />}
         </span>
+    );
+}
+
+function ChatMark() {
+    return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+                d="M6.5 16.4 4.6 20.2V7.6A2.6 2.6 0 0 1 7.2 5h9.6A2.6 2.6 0 0 1 19.4 7.6v6.2a2.6 2.6 0 0 1-2.6 2.6H6.5Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+function BackIcon() {
+    return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+                d="M14.5 6.5 8.5 12l6 5.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
     );
 }
 

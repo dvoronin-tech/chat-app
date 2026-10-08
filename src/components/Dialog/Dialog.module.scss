@@ -1,47 +1,71 @@
 .overlay {
-    width: 100%;
-    height: 100svh;
     position: fixed;
     top: 0;
     left: 0;
-    background-color: rgba(0, 0, 0, 0.3);
     z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
+    height: 100svh;
     padding: 2rem;
+    background-color: rgba(6, 8, 14, 0.72);
+    backdrop-filter: blur(14px);
 }
 
 .content {
-    width: 100%;
-    max-width: 48rem;
-    padding: 2.4rem;
-    background-color: var(--color-bg-ui);
-    border-radius: 2rem;
-    border: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
     gap: 1.6rem;
+    width: 100%;
+    max-width: 44rem;
+    max-height: min(64rem, calc(100svh - 4rem));
+    padding: 2.6rem;
+    overflow: auto;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 2.2rem;
+    background-color: var(--color-bg-elevated);
+    box-shadow: var(--shadow-float);
+    animation: dialog-in 0.18s ease;
 }
 
 .title {
     margin: 0;
-    font-size: 2rem;
-    font-weight: 600;
     color: var(--color-text-main);
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
 }
 
 .description {
-    margin: 0;
-    font-size: 1.6rem;
-    font-weight: 400;
+    margin: -0.6rem 0 0;
     color: var(--color-text-secondary);
+    font-size: 1.45rem;
+    font-weight: 450;
     line-height: 1.5;
 }
 
 .actions {
     display: flex;
-    gap: 1rem;
+    gap: 0.8rem;
     justify-content: flex-end;
-    margin-top: 0.8rem;
+    margin-top: 0.4rem;
+}
+
+@keyframes dialog-in {
+    from {
+        opacity: 0;
+        transform: translateY(0.8rem) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .content {
+        animation: none;
+    }
 }

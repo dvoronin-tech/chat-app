@@ -1,20 +1,28 @@
 import { memo } from 'react';
 import clsx from 'clsx';
+import type { GreenApiChat } from '../../api/greenApi.types';
+import Avatar from '../Avatar/Avatar';
 import styles from './ChatCard.module.scss';
 
 type ChatCardProps = {
     id: string;
     name: string;
+    type: GreenApiChat['type'];
+    unreadCount: number;
     selected: boolean;
     onSelect: (id: string) => void;
 };
 
-function chatInitial(name: string) {
-    const letter = Array.from(name.trim())[0];
-    return letter ? letter.toLocaleUpperCase() : '?';
-}
+function ChatCard({
+    id,
+    name,
+    type,
+    unreadCount,
+    selected,
+    onSelect,
+}: ChatCardProps) {
+    const badge = unreadCount > 99 ? '99+' : String(unreadCount);
 
-function ChatCard({ id, name, selected, onSelect }: ChatCardProps) {
     return (
         <button
             type="button"
@@ -22,10 +30,15 @@ function ChatCard({ id, name, selected, onSelect }: ChatCardProps) {
             aria-pressed={selected}
             onClick={() => onSelect(id)}
         >
-            <div className={styles.avatar} aria-hidden="true">
-                {chatInitial(name)}
-            </div>
-            <p className={styles.name}>{name}</p>
+            <Avatar
+                name={name}
+                rounded={type === 'group' ? 'squircle' : 'circle'}
+            />
+            <span className={styles.body}>
+                <span className={styles.name}>{name}</span>
+                {type === 'group' && <span className={styles.kind}>Группа</span>}
+            </span>
+            {unreadCount > 0 && <span className={styles.badge}>{badge}</span>}
         </button>
     );
 }

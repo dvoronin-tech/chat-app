@@ -2,17 +2,41 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem;
-    padding: 1rem 1.8rem;
-    border-radius: 0.8rem;
+    padding: 1rem 1.6rem;
+    border-radius: 1.2rem;
+    font-size: 1.5rem;
+    font-weight: 650;
+    line-height: 1.2;
+    transition:
+        background-color 0.15s ease,
+        filter 0.15s ease,
+        transform 0.15s ease;
+
+    &:active:not(:disabled) {
+        transform: scale(0.98);
+    }
+
+    &:disabled,
+    &:disabled:hover {
+        opacity: 0.42;
+        box-shadow: none;
+        filter: none;
+        cursor: default;
+    }
 }
 
 .primary {
-    background-color: var(--color-primary);
+    background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--color-primary) 78%, white) 0%,
+        var(--color-primary-deep) 100%
+    );
     color: var(--color-text-accent-button);
+    box-shadow: 0 0.6rem 1.6rem
+        color-mix(in srgb, var(--color-primary-deep) 32%, transparent);
 
-    &:hover {
-        filter: brightness(1.08);
+    &:hover:not(:disabled) {
+        filter: brightness(1.06);
     }
 
     &:focus-visible {
@@ -23,18 +47,19 @@
 
 .simple {
     background-color: transparent;
-    color: var(--color-text-main);
+    color: var(--color-text-secondary);
 
-    &:hover {
+    &:hover:not(:disabled) {
         background-color: color-mix(
             in srgb,
-            var(--color-text-main) 30%,
+            var(--color-text-main) 7%,
             transparent
         );
+        color: var(--color-text-main);
     }
 
     &:focus-visible {
-        outline: 0.2rem solid var(--color-border);
+        outline: 0.2rem solid var(--color-primary);
         outline-offset: 0.2rem;
     }
 }
@@ -43,8 +68,8 @@
     background-color: var(--color-system-red);
     color: var(--color-text-accent-button);
 
-    &:hover {
-        filter: brightness(1.08);
+    &:hover:not(:disabled) {
+        filter: brightness(1.06);
     }
 
     &:focus-visible {

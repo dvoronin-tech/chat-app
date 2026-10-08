@@ -34,14 +34,14 @@ export default function AsideBarDialog({
         if (isPending || !credentials) return;
 
         if (!phoneNumber.trim()) {
-            setValidationError('Phone number is required');
+            setValidationError('Введите номер телефона');
             return;
         }
 
         const formattedPhoneNumber = formatPhoneNumber(phoneNumber.trim());
 
         if (!formattedPhoneNumber) {
-            setValidationError('Invalid phone number');
+            setValidationError('Некорректный номер');
             return;
         }
 
@@ -64,7 +64,7 @@ export default function AsideBarDialog({
                 onSuccess: (exists) => {
                     if (!exists) {
                         setValidationError(
-                            'This phone number is not on WhatsApp',
+                            'Этот номер не зарегистрирован в WhatsApp',
                         );
                         return;
                     }
@@ -84,18 +84,19 @@ export default function AsideBarDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <Dialog.Title>Open chat</Dialog.Title>
+            <Dialog.Title>Новый чат</Dialog.Title>
             <Dialog.Description>
-                Enter the phone number of the person you want to write to
+                Введите номер, чтобы начать переписку
             </Dialog.Description>
             <div className={styles.dialogContent}>
                 <Input
                     name="phone"
-                    placeholder="Recipients phone number"
+                    placeholder="+7 900 000-00-00"
                     type="tel"
                     value={phoneNumber}
                     onChange={handleChange}
                     disabled={isPending}
+                    autoFocus
                 />
                 {visibleError && (
                     <span className={styles.error}>{visibleError}</span>
@@ -109,7 +110,7 @@ export default function AsideBarDialog({
                     }}
                     variant="simple"
                 >
-                    Close
+                    Закрыть
                 </Button>
                 <Button
                     type="button"
@@ -117,7 +118,7 @@ export default function AsideBarDialog({
                     onClick={onOpenChat}
                     disabled={isPending}
                 >
-                    {isPending ? 'Opening' : 'Open'}
+                    {isPending ? 'Открываем' : 'Открыть'}
                 </Button>
             </Dialog.Actions>
         </Dialog>
