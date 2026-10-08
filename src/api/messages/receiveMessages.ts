@@ -4,84 +4,14 @@ import { greenApiClient, greenApiUrl } from '../../lib/green-api-client';
 import { queryClient } from '../../lib/query-client';
 import { useAuthStore } from '../../store/authStore';
 import { useChatsStore } from '../../store/chatsStore';
-import { readText } from '../../utils/readText';
 import type { GreenApiChat, GreenApiCredentials } from '../greenApi.types';
 import { chatsQueryKey } from '../chats/getChats';
+import {
+    parseIncomingText,
+    type IncomingText,
+} from '../parsers/parseIncomingText';
+import { parseNotification } from '../parsers/parseNotification';
 import { chatHistoryQueryKey, type CachedChatMessage } from './getChatHistory';
-
-type IncomingNotification = {
-    typeWebhook?: unknown;
-    timestamp?: unknown;
-    idMessage?: unknown;
-    senderData?: {
-        chatId?: unknown;
-        senderName?: unknown;
-        senderContactName?: unknown;
-        senderPhoneNumber?: unknown;
-    };
-    messageData?: {
-        typeMessage?: unknown;
-        textMessageData?: { textMessage?: unknown };
-    };
-};
-
-type IncomingText = {
-    idMessage: string;
-    chatId: string;
-    phone: string;
-    text: string;
-    timestamp: number;
-    senderName: string | null;
-};
-
-function parseNotification(data: unknown) {
-    if (typeof data !== 'object' || data === null) return null;
-
-    const receiptId = (data as { receiptId?: unknown }).receiptId;
-    if (typeof receiptId !== 'number' || !Number.isFinite(receiptId))
-        return null;
-
-    return { receiptId, body: (data as { body?: unknown }).body };
-}
-
-function parseIncomingText(body: unknown): IncomingText | null {
-    if (typeof body !== 'object' || body === null) return null;
-
-    const notification = body as IncomingNotification;
-
-    if (notification.typeWebhook !== 'incomingMessageReceived') return null;
-    if (notification.messageData?.typeMessage !== 'textMessage') return null;
-
-    const text = readText(
-        notification.messageData.textMessageData?.textMessage,
-    );
-    const chatId = readText(notification.senderData?.chatId);
-    const idMessage = readText(notification.idMessage);
-    if (!text || !chatId || !idMessage) return null;
-
-    const phoneNumber = notification.senderData?.senderPhoneNumber;
-    const phone =
-        typeof phoneNumber === 'number' && phoneNumber > 0
-            ? String(phoneNumber)
-            : '';
-    const senderName =
-        readText(notification.senderData?.senderContactName) ||
-        readText(notification.senderData?.senderName) ||
-        null;
-
-    return {
-        idMessage,
-        chatId,
-        phone,
-        text,
-        timestamp:
-            typeof notification.timestamp === 'number' &&
-            Number.isFinite(notification.timestamp)
-                ? notification.timestamp
-                : Math.floor(Date.now() / 1000),
-        senderName,
-    };
-}
 
 function knownChatIds(credentials: GreenApiCredentials) {
     const ids = new Set<string>();

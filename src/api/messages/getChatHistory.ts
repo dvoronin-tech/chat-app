@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { greenApiClient, greenApiUrl } from '../../lib/green-api-client';
 import { queryClient } from '../../lib/query-client';
 import { useAuthStore } from '../../store/authStore';
-import { readText } from '../../utils/readText';
 import type { ChatMessage, GreenApiCredentials } from '../greenApi.types';
+import { parseMessage } from '../parsers/parseMessage';
 
 export type CachedChatMessage = ChatMessage & { pending?: true };
 
@@ -11,87 +11,6 @@ export const chatHistoryQueryKey = (
     credentials: GreenApiCredentials | null,
     chatId: string | null,
 ) => ['chat-history', credentials, chatId] as const;
-
-type MessagePayload = {
-    type?: string;
-    idMessage?: string;
-    timestamp?: number;
-    typeMessage?: string;
-    textMessage?: string;
-    caption?: string;
-    fileName?: string;
-    senderName?: string;
-    senderContactName?: string;
-    isDeleted?: boolean;
-    downloadUrl?: string;
-    extendedTextMessage?: { text?: string };
-    extendedTextMessageData?: { text?: string };
-    pollMessageData?: { name?: string };
-};
-
-const MESSAGE_TYPE_LABELS: Record<string, string> = {
-    imageMessage: 'Изображение',
-    videoMessage: 'Видео',
-    documentMessage: 'Документ',
-    audioMessage: 'Аудио',
-    stickerMessage: 'Стикер',
-    reactionMessage: 'Реакция',
-    pollMessage: 'Опрос',
-};
-
-function parseMessage(value: unknown): ChatMessage | null {
-    if (typeof value !== 'object' || value === null) return null;
-
-    const message = value as MessagePayload;
-    const idMessage = readText(message.idMessage);
-    if (
-        !idMessage ||
-        (message.type !== 'incoming' && message.type !== 'outgoing')
-    ) {
-        return null;
-    }
-
-    const imageUrl =
-        !message.isDeleted &&
-        (message.typeMessage === 'imageMessage' ||
-            message.typeMessage === 'stickerMessage')
-            ? readText(message.downloadUrl) || null
-            : null;
-    const label = message.typeMessage
-        ? MESSAGE_TYPE_LABELS[message.typeMessage]
-        : undefined;
-    let text = message.isDeleted
-        ? 'Сообщение удалено'
-        : readText(message.textMessage) ||
-          readText(message.extendedTextMessage?.text) ||
-          readText(message.caption) ||
-          readText(message.pollMessageData?.name) ||
-          readText(message.extendedTextMessageData?.text) ||
-          (message.typeMessage === 'documentMessage'
-              ? readText(message.fileName)
-              : '') ||
-          label ||
-          'Сообщение';
-
-    if (imageUrl && text === label) text = '';
-
-    return {
-        id: `${message.type}:${idMessage}`,
-        direction: message.type,
-        timestamp:
-            typeof message.timestamp === 'number' &&
-            Number.isFinite(message.timestamp)
-                ? message.timestamp
-                : 0,
-        text,
-        senderName:
-            readText(message.senderContactName) ||
-            readText(message.senderName) ||
-            null,
-        imageUrl,
-        deliveryStatus: message.type === 'outgoing' ? 'sent' : null,
-    };
-}
 
 function sortMessages(messages: CachedChatMessage[]) {
     return messages.sort((left, right) => left.timestamp - right.timestamp);

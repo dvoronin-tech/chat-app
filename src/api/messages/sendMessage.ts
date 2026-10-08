@@ -4,27 +4,13 @@ import { queryClient } from '../../lib/query-client';
 import type {
     GreenApiCredentials,
     SendMessagePayload,
-    SendMessageResponse,
 } from '../greenApi.types';
+import { parseMessageId } from '../parsers/parseMessageId';
 import { chatHistoryQueryKey, type CachedChatMessage } from './getChatHistory';
 
 export type SendMessageRequest = SendMessagePayload & {
     credentials: GreenApiCredentials;
 };
-
-function parseMessageId(value: unknown) {
-    if (typeof value !== 'object' || value === null) return null;
-
-    const response = value as SendMessageResponse;
-    if (
-        typeof response.idMessage !== 'string' ||
-        response.idMessage.length === 0
-    ) {
-        return null;
-    }
-
-    return response.idMessage;
-}
 
 const sendMessageRequest = async ({
     credentials,
