@@ -42,4 +42,9 @@ export type ChatMessage = {
 };
 
 export type Method =
-    'getChats' | 'sendMessage' | 'getChatHistory' | 'getMessage';
+    | 'getChats'
+    | 'sendMessage'
+    | 'getChatHistory'
+    | 'getMessage'
+    | 'receiveNotification'
+    | 'deleteNotification';

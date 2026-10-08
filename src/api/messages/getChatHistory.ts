@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { greenApiClient, greenApiUrl } from '../../lib/green-api-client';
 import { queryClient } from '../../lib/query-client';
 import { useAuthStore } from '../../store/authStore';
+import { readText } from '../../utils/readText';
 import type { ChatMessage, GreenApiCredentials } from '../greenApi.types';
 
 export type CachedChatMessage = ChatMessage & { pending?: true };
@@ -37,10 +38,6 @@ const MESSAGE_TYPE_LABELS: Record<string, string> = {
     reactionMessage: 'Реакция',
     pollMessage: 'Опрос',
 };
-
-function readText(value: unknown) {
-    return typeof value === 'string' ? value.trim() : '';
-}
 
 function parseMessage(value: unknown): ChatMessage | null {
     if (typeof value !== 'object' || value === null) return null;
