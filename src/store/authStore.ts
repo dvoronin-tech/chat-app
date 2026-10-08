@@ -1,14 +1,10 @@
 import { create } from 'zustand';
 import { createJSONStorage, devtools, persist } from 'zustand/middleware';
-
-type Credentials = {
-    idInstance: string;
-    apiTokenInstance: string;
-};
+import type { GreenApiCredentials } from '../api/greenApi.types';
 
 type AuthState = {
-    credentials: Credentials | null;
-    setCredentials: (credentials: Credentials) => void;
+    credentials: GreenApiCredentials | null;
+    setCredentials: (credentials: GreenApiCredentials) => void;
 };
 
 export const useAuthStore = create<AuthState>()(

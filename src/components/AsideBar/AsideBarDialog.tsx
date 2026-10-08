@@ -1,6 +1,6 @@
 import { type ChangeEvent, useState } from 'react';
-import { useSendMessage } from '../../hooks/useSendMessage.ts';
-import { useChatsStore } from '../../store/chatsStore';
+import { useSendMessage } from '../../api/messages/sendMessage';
+import { useAuthStore } from '../../store/authStore';
 import { formatPhoneNumber } from '../../utils/formatPhoneNumber.ts';
 import Button from '../Button/Button';
 import Dialog from '../Dialog/Dialog.tsx';
@@ -16,19 +16,14 @@ export default function AsideBarDialog({
     open,
     onOpenChange,
 }: AsideBarDialogProps) {
-    const loadChats = useChatsStore((state) => state.loadChats);
+    const credentials = useAuthStore((state) => state.credentials);
     const [phoneNumber, setPhoneNumber] = useState('');
     const [message, setMessage] = useState('');
     const [validationError, setValidationError] = useState('');
-    const { isPending, errorMessage, onSubmit } = useSendMessage({
-        onSuccess: () => {
-            onOpenChange(false);
-            void loadChats();
-        },
-    });
+    const { isPending, error, mutate } = useSendMessage();
 
     const onSendMessage = () => {
-        if (isPending) return;
+        if (isPending || !credentials) return;
 
         if (!phoneNumber.trim()) {
             setValidationError('Phone number is required');
@@ -55,10 +50,14 @@ export default function AsideBarDialog({
         }
 
         setValidationError('');
-        void onSubmit({
-            recipientsPhoneNumber: formattedPhoneNumber,
-            message: trimmedMessage,
-        });
+        mutate(
+            {
+                credentials,
+                recipientsPhoneNumber: formattedPhoneNumber,
+                message: trimmedMessage,
+            },
+            { onSuccess: () => onOpenChange(false) },
+        );
     };
 
     const handleChange = (
@@ -79,7 +78,7 @@ export default function AsideBarDialog({
         }
     };
 
-    const visibleError = validationError || errorMessage;
+    const visibleError = validationError || error?.message;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>

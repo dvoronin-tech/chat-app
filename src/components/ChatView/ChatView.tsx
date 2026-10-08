@@ -4,95 +4,41 @@ import {
     type SubmitEvent,
     memo,
     useEffect,
-    useMemo,
     useRef,
     useState,
+    useMemo,
 } from 'react';
-import { useShallow } from 'zustand/react/shallow';
 import type {
     ChatMessage,
     MessageDeliveryStatus,
 } from '../../api/greenApi.types';
 import { useChatsStore } from '../../store/chatsStore';
-import {
-    type MessagesStatus,
-    useMessagesStore,
-} from '../../store/messagesStore';
+import { useAuthStore } from '../../store/authStore';
+import { useGetChats } from '../../api/chats/getChats';
+import { useGetChatHistory } from '../../api/messages/getChatHistory';
+import { useSendMessage } from '../../api/messages/sendMessage';
 import { formatMessageTime, messageDate } from '../../utils/messageTime';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
 import styles from './ChatView.module.scss';
 
-const STATUS_POLL_MS = 5000;
-
 export default function ChatView() {
-    const { selectedChatId, chats } = useChatsStore(
-        useShallow((state) => ({
-            selectedChatId: state.selectedChatId,
-            chats: state.chats,
-        })),
-    );
+    const selectedChatId = useChatsStore((state) => state.selectedChatId);
+    const credentials = useAuthStore((state) => state.credentials);
+    const { data: chats = [] } = useGetChats();
     const chat = useMemo(
         () => chats.find((item) => item.id === selectedChatId) ?? null,
-        [chats, selectedChatId],
+        [selectedChatId],
     );
     const {
-        loadedChatId,
-        messages,
-        status,
+        data: messages = [],
+        isFetching,
+        isError,
+        isSuccess,
         error,
-        loadMessages,
-        sendMessage,
-        refreshOutgoingStatuses,
-    } = useMessagesStore(
-        useShallow(
-            ({
-                chatId,
-                messages,
-                status,
-                error,
-                loadMessages,
-                sendMessage,
-                refreshOutgoingStatuses,
-            }) => ({
-                loadedChatId: chatId,
-                messages,
-                status,
-                error,
-                loadMessages,
-                sendMessage,
-                refreshOutgoingStatuses,
-            }),
-        ),
-    );
-    const isCurrentChat = loadedChatId === selectedChatId;
-    const visibleStatus = isCurrentChat ? status : 'loading';
-    const visibleMessages = isCurrentChat ? messages : [];
-
-    useEffect(() => {
-        if (!selectedChatId) return;
-
-        const controller = new AbortController();
-        void loadMessages(selectedChatId, controller.signal);
-
-        return () => controller.abort();
-    }, [selectedChatId, loadMessages]);
-
-    useEffect(() => {
-        if (!selectedChatId || visibleStatus !== 'ready') return;
-
-        const controller = new AbortController();
-        const tick = () => {
-            void refreshOutgoingStatuses(selectedChatId, controller.signal);
-        };
-        const timer = window.setInterval(tick, STATUS_POLL_MS);
-        tick();
-
-        return () => {
-            controller.abort();
-            window.clearInterval(timer);
-        };
-    }, [selectedChatId, visibleStatus, refreshOutgoingStatuses]);
+        refetch,
+    } = useGetChatHistory(selectedChatId);
+    const { mutateAsync: sendMessage } = useSendMessage();
 
     if (!chat) {
         return (
@@ -113,22 +59,31 @@ export default function ChatView() {
                     type="button"
                     variant="simple"
                     className={styles.refresh}
-                    disabled={visibleStatus === 'loading'}
-                    onClick={() => void loadMessages(activeChat.id)}
+                    disabled={isFetching}
+                    onClick={() => void refetch()}
                 >
                     Обновить
                 </Button>
             </header>
             <MessageList
-                status={visibleStatus}
-                messages={visibleMessages}
-                error={error}
+                isLoading={isFetching}
+                isError={isError}
+                messages={messages}
+                error={error?.message ?? null}
                 showSender={showSender}
             />
             <Composer
                 key={activeChat.id}
-                canSend={visibleStatus === 'ready'}
-                onSend={(text) => sendMessage(activeChat.id, text)}
+                canSend={isSuccess && !isFetching}
+                onSend={async (text) => {
+                    if (!credentials) return;
+
+                    await sendMessage({
+                        credentials,
+                        recipientsPhoneNumber: activeChat.id,
+                        message: text,
+                    });
+                }}
             />
         </section>
     );
@@ -195,27 +150,26 @@ function Composer({
 }
 
 interface MessageListProps {
-    status: MessagesStatus;
+    isLoading: boolean;
+    isError: boolean;
     messages: ChatMessage[];
     error: string | null;
     showSender: boolean;
 }
 
 const MessageList: FC<MessageListProps> = memo(
-    ({ status, messages, error, showSender }) => {
+    ({ isLoading, isError, messages, error, showSender }) => {
         const listRef = useRef<HTMLDivElement>(null);
 
         useEffect(() => {
             const list = listRef.current;
-            if (!list || status !== 'ready') return;
+            if (!list || isLoading || isError) return;
 
             list.scrollTop = list.scrollHeight;
-        }, [messages, status]);
+        }, [messages, isLoading, isError]);
 
-        if (status === 'loading')
-            return <p className={styles.placeholder}>Загрузка</p>;
-        if (status === 'error')
-            return <p className={styles.placeholder}>{error}</p>;
+        if (isLoading) return <p className={styles.placeholder}>Загрузка</p>;
+        if (isError) return <p className={styles.placeholder}>{error}</p>;
         if (messages.length === 0)
             return <p className={styles.placeholder}>Нет сообщений</p>;
 
@@ -274,27 +228,17 @@ const MessageList: FC<MessageListProps> = memo(
 const RECEIPT_LABEL: Record<MessageDeliveryStatus, string> = {
     sending: 'Отправляется',
     sent: 'Отправлено',
-    checked: 'Прочитано',
 };
 
 function Receipt({ status }: { status: MessageDeliveryStatus }) {
     return (
         <span
-            className={clsx(
-                styles.receipt,
-                status === 'checked' && styles.checked,
-            )}
+            className={styles.receipt}
             role="img"
             aria-label={RECEIPT_LABEL[status]}
             title={RECEIPT_LABEL[status]}
         >
-            {status === 'sending' ? (
-                <ClockIcon />
-            ) : status === 'checked' ? (
-                <ChecksIcon />
-            ) : (
-                <CheckIcon />
-            )}
+            {status === 'sending' ? <ClockIcon /> : <CheckIcon />}
         </span>
     );
 }
@@ -350,29 +294,6 @@ function CheckIcon() {
         <svg viewBox="0 0 16 16" aria-hidden="true">
             <path
                 d="M3.2 8.3 6.4 11.5 12.8 4.7"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    );
-}
-
-function ChecksIcon() {
-    return (
-        <svg viewBox="0 0 20 16" aria-hidden="true">
-            <path
-                d="M1.4 8.3 4.4 11.3 10.2 5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-            <path
-                d="M7.2 8.3 10.2 11.3 16.6 4.6"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.6"

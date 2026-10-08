@@ -1,10 +1,8 @@
 import { type FC, memo, useState } from 'react';
 import PlusIcon from '../../assets/plus.svg?react';
-import {
-    type ChatsStatus,
-    type Chat,
-    useChatsStore,
-} from '../../store/chatsStore';
+import type { GreenApiChat } from '../../api/greenApi.types';
+import { useGetChats } from '../../api/chats/getChats';
+import { useChatsStore } from '../../store/chatsStore';
 import Button from '../Button/Button';
 import ChatCard from '../ChatCard/ChatCard';
 import Input from '../Input/Input';
@@ -15,14 +13,13 @@ import { useShallow } from 'zustand/react/shallow';
 export default function AsideBar() {
     const [isAddChatModalOpen, setIsAddChatModalOpen] = useState(false);
     const [query, setQuery] = useState('');
-    const { chats, status, error, loadChats } = useChatsStore(
-        useShallow(({ chats, status, error, loadChats }) => ({
-            chats,
-            status,
-            error,
-            loadChats,
-        })),
-    );
+    const {
+        data: chats = [],
+        isFetching,
+        isError,
+        error,
+        refetch,
+    } = useGetChats();
 
     const normalizedQuery = query.trim().toLocaleLowerCase();
     const visibleChats = normalizedQuery
@@ -41,8 +38,8 @@ export default function AsideBar() {
                             <Button
                                 type="button"
                                 variant="simple"
-                                disabled={status === 'loading'}
-                                onClick={() => void loadChats()}
+                                disabled={isFetching}
+                                onClick={() => void refetch()}
                             >
                                 Обновить
                             </Button>
@@ -68,8 +65,9 @@ export default function AsideBar() {
                 {
                     <ChatList
                         chats={visibleChats}
-                        status={status}
-                        error={error}
+                        isLoading={isFetching}
+                        isError={isError}
+                        error={error?.message ?? null}
                     />
                 }
             </aside>
@@ -84,35 +82,36 @@ export default function AsideBar() {
 }
 
 interface ChatListProps {
-    chats: Chat[];
-    status: ChatsStatus;
+    chats: GreenApiChat[];
+    isLoading: boolean;
+    isError: boolean;
     error: string | null;
 }
 
-const ChatList: FC<ChatListProps> = memo(({ status, chats, error }) => {
-    const { selectedChatId, selectChat } = useChatsStore(
-        useShallow(({ selectedChatId, selectChat }) => ({
-            selectedChatId,
-            selectChat,
-        })),
-    );
+const ChatList: FC<ChatListProps> = memo(
+    ({ isLoading, isError, chats, error }) => {
+        const { selectedChatId, selectChat } = useChatsStore(
+            useShallow(({ selectedChatId, selectChat }) => ({
+                selectedChatId,
+                selectChat,
+            })),
+        );
 
-    if (status === 'loading')
-        return <span className={styles.status}>Loading</span>;
-    if (status === 'error')
-        return <span className={styles.status}>{error}</span>;
+        if (isLoading) return <span className={styles.status}>Loading</span>;
+        if (isError) return <span className={styles.status}>{error}</span>;
 
-    return (
-        <div className={styles.list}>
-            {chats.map((chat) => (
-                <ChatCard
-                    key={chat.id}
-                    id={chat.id}
-                    name={chat.name}
-                    selected={chat.id === selectedChatId}
-                    onSelect={selectChat}
-                />
-            ))}
-        </div>
-    );
-});
+        return (
+            <div className={styles.list}>
+                {chats.map((chat) => (
+                    <ChatCard
+                        key={chat.id}
+                        id={chat.id}
+                        name={chat.name}
+                        selected={chat.id === selectedChatId}
+                        onSelect={selectChat}
+                    />
+                ))}
+            </div>
+        );
+    },
+);

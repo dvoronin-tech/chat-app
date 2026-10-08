@@ -29,7 +29,7 @@ export type SendMessageResponse = {
     idMessage?: string;
 };
 
-export type MessageDeliveryStatus = 'sending' | 'sent' | 'checked';
+export type MessageDeliveryStatus = 'sending' | 'sent';
 
 export type ChatMessage = {
     id: string;
