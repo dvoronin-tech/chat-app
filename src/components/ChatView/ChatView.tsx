@@ -1,7 +1,18 @@
 import clsx from 'clsx';
-import { type FC, memo, useEffect, useMemo, useRef } from 'react';
+import {
+    type FC,
+    type SubmitEvent,
+    memo,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import type { ChatMessage } from '../../api/greenApi.types';
+import type {
+    ChatMessage,
+    MessageDeliveryStatus,
+} from '../../api/greenApi.types';
 import { useChatsStore } from '../../store/chatsStore';
 import {
     type MessagesStatus,
@@ -9,7 +20,10 @@ import {
 } from '../../store/messagesStore';
 import { formatMessageTime, messageDate } from '../../utils/messageTime';
 import Button from '../Button/Button';
+import Input from '../Input/Input';
 import styles from './ChatView.module.scss';
+
+const STATUS_POLL_MS = 5000;
 
 export default function ChatView() {
     const { selectedChatId, chats } = useChatsStore(
@@ -22,16 +36,35 @@ export default function ChatView() {
         () => chats.find((item) => item.id === selectedChatId) ?? null,
         [chats, selectedChatId],
     );
-    const { loadedChatId, messages, status, error, loadMessages } =
-        useMessagesStore(
-            useShallow(({ chatId, messages, status, error, loadMessages }) => ({
+    const {
+        loadedChatId,
+        messages,
+        status,
+        error,
+        loadMessages,
+        sendMessage,
+        refreshOutgoingStatuses,
+    } = useMessagesStore(
+        useShallow(
+            ({
+                chatId,
+                messages,
+                status,
+                error,
+                loadMessages,
+                sendMessage,
+                refreshOutgoingStatuses,
+            }) => ({
                 loadedChatId: chatId,
                 messages,
                 status,
                 error,
                 loadMessages,
-            })),
-        );
+                sendMessage,
+                refreshOutgoingStatuses,
+            }),
+        ),
+    );
     const isCurrentChat = loadedChatId === selectedChatId;
     const visibleStatus = isCurrentChat ? status : 'loading';
     const visibleMessages = isCurrentChat ? messages : [];
@@ -45,6 +78,22 @@ export default function ChatView() {
         return () => controller.abort();
     }, [selectedChatId, loadMessages]);
 
+    useEffect(() => {
+        if (!selectedChatId || visibleStatus !== 'ready') return;
+
+        const controller = new AbortController();
+        const tick = () => {
+            void refreshOutgoingStatuses(selectedChatId, controller.signal);
+        };
+        const timer = window.setInterval(tick, STATUS_POLL_MS);
+        tick();
+
+        return () => {
+            controller.abort();
+            window.clearInterval(timer);
+        };
+    }, [selectedChatId, visibleStatus, refreshOutgoingStatuses]);
+
     if (!chat) {
         return (
             <section className={styles.root}>
@@ -53,18 +102,19 @@ export default function ChatView() {
         );
     }
 
-    const showSender = chat.type !== 'user';
+    const activeChat = chat;
+    const showSender = activeChat.type !== 'user';
 
     return (
-        <section className={styles.root} aria-label={chat.name}>
+        <section className={styles.root} aria-label={activeChat.name}>
             <header className={styles.header}>
-                <h2 className={styles.title}>{chat.name}</h2>
+                <h2 className={styles.title}>{activeChat.name}</h2>
                 <Button
                     type="button"
                     variant="simple"
                     className={styles.refresh}
                     disabled={visibleStatus === 'loading'}
-                    onClick={() => void loadMessages(chat.id)}
+                    onClick={() => void loadMessages(activeChat.id)}
                 >
                     Обновить
                 </Button>
@@ -75,7 +125,72 @@ export default function ChatView() {
                 error={error}
                 showSender={showSender}
             />
+            <Composer
+                key={activeChat.id}
+                canSend={visibleStatus === 'ready'}
+                onSend={(text) => sendMessage(activeChat.id, text)}
+            />
         </section>
+    );
+}
+
+function Composer({
+    canSend,
+    onSend,
+}: {
+    canSend: boolean;
+    onSend: (text: string) => Promise<void>;
+}) {
+    const [draft, setDraft] = useState('');
+    const [sendError, setSendError] = useState<string | null>(null);
+    const trimmed = draft.trim();
+    const submitDisabled = !canSend || trimmed.length === 0;
+
+    async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (submitDisabled) return;
+
+        setDraft('');
+        setSendError(null);
+
+        try {
+            await onSend(trimmed);
+        } catch (submitError) {
+            setDraft(trimmed);
+            setSendError(
+                submitError instanceof Error
+                    ? submitError.message
+                    : 'Не удалось отправить сообщение',
+            );
+        }
+    }
+
+    return (
+        <form className={styles.composer} onSubmit={handleSubmit}>
+            <div className={styles.field}>
+                <Input
+                    value={draft}
+                    onChange={(event) => {
+                        setDraft(event.target.value);
+                        if (sendError) setSendError(null);
+                    }}
+                    placeholder="Сообщение"
+                    aria-label="Сообщение"
+                    autoComplete="off"
+                    enterKeyHint="send"
+                    maxLength={4000}
+                />
+            </div>
+            <Button
+                type="submit"
+                className={styles.send}
+                aria-label="Отправить"
+                disabled={submitDisabled}
+            >
+                <SendIcon />
+            </Button>
+            {sendError && <p className={styles.sendError}>{sendError}</p>}
+        </form>
     );
 }
 
@@ -101,7 +216,6 @@ const MessageList: FC<MessageListProps> = memo(
             return <p className={styles.placeholder}>Загрузка</p>;
         if (status === 'error')
             return <p className={styles.placeholder}>{error}</p>;
-        if (status !== 'idle') return null;
         if (messages.length === 0)
             return <p className={styles.placeholder}>Нет сообщений</p>;
 
@@ -133,15 +247,22 @@ const MessageList: FC<MessageListProps> = memo(
                         {message.text && (
                             <p className={styles.text}>{message.text}</p>
                         )}
-                        {message.timestamp > 0 && (
-                            <time
-                                className={styles.time}
-                                dateTime={messageDate(
-                                    message.timestamp,
-                                ).toISOString()}
-                            >
-                                {formatMessageTime(message.timestamp)}
-                            </time>
+                        {(message.timestamp > 0 || message.deliveryStatus) && (
+                            <div className={styles.meta}>
+                                {message.timestamp > 0 && (
+                                    <time
+                                        className={styles.time}
+                                        dateTime={messageDate(
+                                            message.timestamp,
+                                        ).toISOString()}
+                                    >
+                                        {formatMessageTime(message.timestamp)}
+                                    </time>
+                                )}
+                                {message.deliveryStatus && (
+                                    <Receipt status={message.deliveryStatus} />
+                                )}
+                            </div>
                         )}
                     </article>
                 ))}
@@ -149,3 +270,115 @@ const MessageList: FC<MessageListProps> = memo(
         );
     },
 );
+
+const RECEIPT_LABEL: Record<MessageDeliveryStatus, string> = {
+    sending: 'Отправляется',
+    sent: 'Отправлено',
+    checked: 'Прочитано',
+};
+
+function Receipt({ status }: { status: MessageDeliveryStatus }) {
+    return (
+        <span
+            className={clsx(
+                styles.receipt,
+                status === 'checked' && styles.checked,
+            )}
+            role="img"
+            aria-label={RECEIPT_LABEL[status]}
+            title={RECEIPT_LABEL[status]}
+        >
+            {status === 'sending' ? (
+                <ClockIcon />
+            ) : status === 'checked' ? (
+                <ChecksIcon />
+            ) : (
+                <CheckIcon />
+            )}
+        </span>
+    );
+}
+
+function SendIcon() {
+    return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+                d="M20.5 4.5 10.8 14.2"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <path
+                d="M20.5 4.5 13.8 20.2 10.8 14.2 4.8 11.2 20.5 4.5Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+function ClockIcon() {
+    return (
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+            <circle
+                cx="8"
+                cy="8"
+                r="6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+            />
+            <path
+                d="M8 4.6V8.2l2.3 1.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+function CheckIcon() {
+    return (
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path
+                d="M3.2 8.3 6.4 11.5 12.8 4.7"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
+function ChecksIcon() {
+    return (
+        <svg viewBox="0 0 20 16" aria-hidden="true">
+            <path
+                d="M1.4 8.3 4.4 11.3 10.2 5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <path
+                d="M7.2 8.3 10.2 11.3 16.6 4.6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}

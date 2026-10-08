@@ -29,6 +29,8 @@ export type SendMessageResponse = {
     idMessage?: string;
 };
 
+export type MessageDeliveryStatus = 'sending' | 'sent' | 'checked';
+
 export type ChatMessage = {
     id: string;
     direction: 'incoming' | 'outgoing';
@@ -36,6 +38,8 @@ export type ChatMessage = {
     text: string;
     senderName: string | null;
     imageUrl: string | null;
+    deliveryStatus: MessageDeliveryStatus | null;
 };
 
-export type Method = 'getChats' | 'sendMessage' | 'getChatHistory';
+export type Method =
+    'getChats' | 'sendMessage' | 'getChatHistory' | 'getMessage';

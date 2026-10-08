@@ -4,6 +4,7 @@ import type {
     ChatMessage,
     ChatPayload,
     GreenApiChat,
+    MessageDeliveryStatus,
     Method,
     SendMessagePayload,
     SendMessageResponse,
@@ -71,6 +72,7 @@ type MessagePayload = {
     senderContactName?: string;
     isDeleted?: boolean;
     downloadUrl?: string;
+    statusMessage?: string;
     extendedTextMessage?: { text?: string };
     extendedTextMessageData?: { text?: string };
     pollMessageData?: { name?: string };
@@ -88,6 +90,18 @@ const MESSAGE_TYPE_LABELS: Record<string, string> = {
 
 function readText(value: unknown) {
     return typeof value === 'string' ? value.trim() : '';
+}
+
+function toDeliveryStatus(
+    statusMessage: unknown,
+): MessageDeliveryStatus | null {
+    if (statusMessage === 'pending') return 'sending';
+    if (statusMessage === 'sent') return 'sent';
+    if (statusMessage === 'delivered' || statusMessage === 'read') {
+        return 'checked';
+    }
+
+    return null;
 }
 
 function parseMessage(value: unknown): ChatMessage | null {
@@ -140,6 +154,10 @@ function parseMessage(value: unknown): ChatMessage | null {
             readText(message.senderName) ||
             null,
         imageUrl,
+        deliveryStatus:
+            message.type === 'outgoing'
+                ? (toDeliveryStatus(message.statusMessage) ?? 'sent')
+                : null,
     };
 }
 
@@ -154,9 +172,12 @@ export class GreenApi {
     }
 
     async getChats(signal?: AbortSignal) {
-        const payload = await this.request<unknown>(this.methodUrl('getChats'), {
-            signal,
-        });
+        const payload = await this.request<unknown>(
+            this.methodUrl('getChats'),
+            {
+                signal,
+            },
+        );
 
         if (!Array.isArray(payload)) {
             throw new Error('Unexpected chats response');
@@ -184,6 +205,29 @@ export class GreenApi {
         }
 
         return idMessage;
+    }
+
+    async getOutgoingStatus(
+        chatId: string,
+        idMessage: string,
+        signal?: AbortSignal,
+    ) {
+        const payload = await this.request<unknown>(
+            this.methodUrl('getMessage'),
+            {
+                method: 'POST',
+                data: { chatId, idMessage },
+                signal,
+                timeout: 10_000,
+            },
+        );
+
+        if (typeof payload !== 'object' || payload === null) return null;
+        if (!('statusMessage' in payload)) return null;
+
+        return toDeliveryStatus(
+            (payload as { statusMessage?: unknown }).statusMessage,
+        );
     }
 
     async getChatHistory(chatId: string, signal?: AbortSignal) {
@@ -228,6 +272,7 @@ export class GreenApi {
             method?: 'GET' | 'POST';
             data?: unknown;
             signal?: AbortSignal;
+            timeout?: number;
         },
     ) {
         const response = await api.request<T>({
@@ -235,6 +280,7 @@ export class GreenApi {
             method: config?.method ?? 'GET',
             data: config?.data,
             signal: config?.signal,
+            timeout: config?.timeout,
         });
 
         return response.data;
