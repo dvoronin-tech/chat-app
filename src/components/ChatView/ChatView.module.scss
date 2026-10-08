@@ -1,0 +1,110 @@
+.root {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
+    background-color: var(--color-bg-main);
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    min-height: 7.2rem;
+    padding: 1.6rem 2.4rem;
+    border-bottom: 0.1rem solid var(--color-border);
+    background-color: var(--color-bg-ui);
+}
+
+.title {
+    overflow: hidden;
+    min-width: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.refresh {
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.placeholder {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    padding: 2.4rem;
+    color: var(--color-text-secondary);
+    font-size: 1.6rem;
+    text-align: center;
+}
+
+.list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.8rem;
+    min-height: 0;
+    padding: 1.6rem 2.4rem 2rem;
+    overflow-y: auto;
+}
+
+.spacer {
+    flex: 1 0 auto;
+}
+
+.message {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    max-width: min(70%, 52rem);
+    padding: 1rem 1.2rem;
+    border-radius: 1.2rem;
+}
+
+.incoming {
+    align-self: flex-start;
+    background-color: var(--color-bg-ui);
+}
+
+.outgoing {
+    align-self: flex-end;
+    background-color: var(--color-primary);
+    color: var(--color-text-accent-button);
+}
+
+.sender {
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--color-primary);
+}
+
+.text {
+    font-size: 1.5rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.media {
+    display: block;
+    max-width: 28rem;
+    max-height: 28rem;
+    border-radius: 0.8rem;
+    object-fit: contain;
+}
+
+.time {
+    align-self: flex-end;
+    font-size: 1.2rem;
+    line-height: 1.2;
+    color: var(--color-text-secondary);
+}
+
+.outgoing .time {
+    color: color-mix(in srgb, var(--color-text-accent-button) 75%, transparent);
+}

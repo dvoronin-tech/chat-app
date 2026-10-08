@@ -24,6 +24,12 @@
     letter-spacing: -0.02em;
 }
 
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
 .add {
     flex-shrink: 0;
     width: 4rem;

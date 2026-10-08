@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import type {
+    ChatMessage,
     ChatPayload,
     GreenApiChat,
     Method,
@@ -9,6 +10,7 @@ import type {
 } from './greenApi.types';
 
 const API_URL = 'https://api.greenapi.com';
+const CHAT_HISTORY_COUNT = 5000;
 
 export const api = axios.create({
     baseURL: API_URL,
@@ -41,15 +43,103 @@ function parseChat(value: unknown): GreenApiChat | null {
     const chat = value as ChatPayload;
     if (typeof chat.id !== 'string' || chat.id.length === 0) return null;
 
+    const id =
+        typeof chat.newChatId === 'string' && chat.newChatId.length > 0
+            ? chat.newChatId
+            : chat.id;
     const trimmedName = typeof chat.name === 'string' ? chat.name.trim() : '';
-    const name = trimmedName || chat.id.split('@')[0] || chat.id;
+    const name = trimmedName || id.split('@')[0] || id;
 
     return {
-        id: chat.id,
+        id,
         name,
         type: chat.type === 'group' ? 'group' : 'user',
         unreadCount: chat.unreadCount ?? 0,
         archive: !!chat.archive,
+    };
+}
+
+type MessagePayload = {
+    type?: string;
+    idMessage?: string;
+    timestamp?: number;
+    typeMessage?: string;
+    textMessage?: string;
+    caption?: string;
+    fileName?: string;
+    senderName?: string;
+    senderContactName?: string;
+    isDeleted?: boolean;
+    downloadUrl?: string;
+    extendedTextMessage?: { text?: string };
+    extendedTextMessageData?: { text?: string };
+    pollMessageData?: { name?: string };
+};
+
+const MESSAGE_TYPE_LABELS: Record<string, string> = {
+    imageMessage: 'Изображение',
+    videoMessage: 'Видео',
+    documentMessage: 'Документ',
+    audioMessage: 'Аудио',
+    stickerMessage: 'Стикер',
+    reactionMessage: 'Реакция',
+    pollMessage: 'Опрос',
+};
+
+function readText(value: unknown) {
+    return typeof value === 'string' ? value.trim() : '';
+}
+
+function parseMessage(value: unknown): ChatMessage | null {
+    if (typeof value !== 'object' || value === null) return null;
+
+    const message = value as MessagePayload;
+    const idMessage = readText(message.idMessage);
+    if (
+        !idMessage ||
+        (message.type !== 'incoming' && message.type !== 'outgoing')
+    ) {
+        return null;
+    }
+
+    const imageUrl =
+        !message.isDeleted &&
+        (message.typeMessage === 'imageMessage' ||
+            message.typeMessage === 'stickerMessage')
+            ? readText(message.downloadUrl) || null
+            : null;
+    const label = message.typeMessage
+        ? MESSAGE_TYPE_LABELS[message.typeMessage]
+        : undefined;
+    let text = message.isDeleted
+        ? 'Сообщение удалено'
+        : readText(message.textMessage) ||
+          readText(message.extendedTextMessage?.text) ||
+          readText(message.caption) ||
+          readText(message.pollMessageData?.name) ||
+          readText(message.extendedTextMessageData?.text) ||
+          (message.typeMessage === 'documentMessage'
+              ? readText(message.fileName)
+              : '') ||
+          label ||
+          'Сообщение';
+
+    if (imageUrl && text === label) text = '';
+
+    return {
+        id: `${message.type}:${idMessage}`,
+        direction: message.type,
+        timestamp:
+            typeof message.timestamp === 'number' &&
+            Number.isFinite(message.timestamp)
+                ? message.timestamp
+                : 0,
+        text,
+        senderName:
+            readText(message.senderContactName) ||
+            readText(message.senderName) ||
+            null,
+        imageUrl,
     };
 }
 
@@ -64,12 +154,9 @@ export class GreenApi {
     }
 
     async getChats(signal?: AbortSignal) {
-        const payload = await this.request<unknown>(
-            this.methodUrl('getChats'),
-            {
-                signal,
-            },
-        );
+        const payload = await this.request<unknown>(this.methodUrl('getChats'), {
+            signal,
+        });
 
         if (!Array.isArray(payload)) {
             throw new Error('Unexpected chats response');
@@ -97,6 +184,27 @@ export class GreenApi {
         }
 
         return idMessage;
+    }
+
+    async getChatHistory(chatId: string, signal?: AbortSignal) {
+        const history = await this.request<unknown>(
+            this.methodUrl('getChatHistory'),
+            {
+                method: 'POST',
+                data: { chatId, count: CHAT_HISTORY_COUNT },
+                signal,
+            },
+        );
+        if (!Array.isArray(history)) {
+            throw new Error('Unexpected chat history response');
+        }
+
+        return history
+            .flatMap((item) => {
+                const message = parseMessage(item);
+                return message ? [message] : [];
+            })
+            .sort((a, b) => a.timestamp - b.timestamp);
     }
 
     private methodUrl(method: Method) {

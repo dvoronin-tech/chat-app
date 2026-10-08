@@ -1,8 +1,12 @@
 import { memo } from 'react';
+import clsx from 'clsx';
 import styles from './ChatCard.module.scss';
 
 type ChatCardProps = {
+    id: string;
     name: string;
+    selected: boolean;
+    onSelect: (id: string) => void;
 };
 
 function chatInitial(name: string) {
@@ -10,14 +14,19 @@ function chatInitial(name: string) {
     return letter ? letter.toLocaleUpperCase() : '?';
 }
 
-function ChatCard({ name }: ChatCardProps) {
+function ChatCard({ id, name, selected, onSelect }: ChatCardProps) {
     return (
-        <article className={styles.root}>
+        <button
+            type="button"
+            className={clsx(styles.root, selected && styles.selected)}
+            aria-pressed={selected}
+            onClick={() => onSelect(id)}
+        >
             <div className={styles.avatar} aria-hidden="true">
                 {chatInitial(name)}
             </div>
             <p className={styles.name}>{name}</p>
-        </article>
+        </button>
     );
 }
 

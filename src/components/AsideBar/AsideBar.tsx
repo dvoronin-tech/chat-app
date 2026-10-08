@@ -15,8 +15,13 @@ import { useShallow } from 'zustand/react/shallow';
 export default function AsideBar() {
     const [isAddChatModalOpen, setIsAddChatModalOpen] = useState(false);
     const [query, setQuery] = useState('');
-    const { chats, status, error } = useChatsStore(
-        useShallow(({ chats, status, error }) => ({ chats, status, error })),
+    const { chats, status, error, loadChats } = useChatsStore(
+        useShallow(({ chats, status, error, loadChats }) => ({
+            chats,
+            status,
+            error,
+            loadChats,
+        })),
     );
 
     const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -32,15 +37,25 @@ export default function AsideBar() {
                 <div className={styles.headerControls}>
                     <header className={styles.header}>
                         <h1 className={styles.title}>Чаты</h1>
-                        <Button
-                            type="button"
-                            variant="primary"
-                            className={styles.add}
-                            aria-label="Новый чат"
-                            onClick={() => setIsAddChatModalOpen(true)}
-                        >
-                            <PlusIcon />
-                        </Button>
+                        <div className={styles.headerActions}>
+                            <Button
+                                type="button"
+                                variant="simple"
+                                disabled={status === 'loading'}
+                                onClick={() => void loadChats()}
+                            >
+                                Обновить
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="primary"
+                                className={styles.add}
+                                aria-label="Новый чат"
+                                onClick={() => setIsAddChatModalOpen(true)}
+                            >
+                                <PlusIcon />
+                            </Button>
+                        </div>
                     </header>
                     <Input
                         type="search"
@@ -75,6 +90,13 @@ interface ChatListProps {
 }
 
 const ChatList: FC<ChatListProps> = memo(({ status, chats, error }) => {
+    const { selectedChatId, selectChat } = useChatsStore(
+        useShallow(({ selectedChatId, selectChat }) => ({
+            selectedChatId,
+            selectChat,
+        })),
+    );
+
     if (status === 'loading')
         return <span className={styles.status}>Loading</span>;
     if (status === 'error')
@@ -83,7 +105,13 @@ const ChatList: FC<ChatListProps> = memo(({ status, chats, error }) => {
     return (
         <div className={styles.list}>
             {chats.map((chat) => (
-                <ChatCard key={chat.id} name={chat.name} />
+                <ChatCard
+                    key={chat.id}
+                    id={chat.id}
+                    name={chat.name}
+                    selected={chat.id === selectedChatId}
+                    onSelect={selectChat}
+                />
             ))}
         </div>
     );

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import AsideBar from '../../components/AsideBar/AsideBar';
+import ChatView from '../../components/ChatView/ChatView';
 import { useAuthStore } from '../../store/authStore';
 import { useChatsStore } from '../../store/chatsStore';
 import styles from './Main.module.scss';
@@ -20,6 +21,7 @@ export default function Main() {
     return (
         <div className={styles.root}>
             <AsideBar />
+            <ChatView />
         </div>
     );
 }

@@ -1,49 +1,47 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { greenApi, isRequestCanceled } from '../api/greenApi';
-import type { GreenApiChat } from '../api/greenApi.types';
+import { greenApi, isRequestCanceled as isAbortError } from '../api/greenApi';
+import type { ChatMessage } from '../api/greenApi.types';
 
-export type Chat = GreenApiChat;
+export type MessagesStatus = 'idle' | 'loading' | 'ready' | 'error';
 
-export type ChatsStatus = 'idle' | 'loading' | 'ready' | 'error';
-
-type ChatsState = {
-    chats: Chat[];
-    status: ChatsStatus;
+type MessagesState = {
+    chatId: string | null;
+    messages: ChatMessage[];
+    status: MessagesStatus;
     error: string | null;
-    selectedChatId: string | null;
-    loadChats: (signal?: AbortSignal) => Promise<void>;
-    selectChat: (chatId: string) => void;
+    loadMessages: (chatId: string, signal?: AbortSignal) => Promise<void>;
 };
 
-function isAbortError(error: unknown) {
-    return isRequestCanceled(error);
-}
-
-export const useChatsStore = create<ChatsState>()(
+export const useMessagesStore = create<MessagesState>()(
     devtools(
         (set) => {
             let requestId = 0;
 
             return {
-                chats: [],
+                chatId: null,
+                messages: [],
                 status: 'idle',
                 error: null,
-                selectedChatId: null,
-                selectChat: (chatId) => {
-                    set({ selectedChatId: chatId });
-                },
-                loadChats: async (signal) => {
+                loadMessages: async (chatId, signal) => {
                     const id = ++requestId;
-                    set({ status: 'loading', error: null });
+                    set({
+                        chatId,
+                        messages: [],
+                        status: 'loading',
+                        error: null,
+                    });
 
                     try {
-                        const chats = await greenApi.getChats(signal);
+                        const messages = await greenApi.getChatHistory(
+                            chatId,
+                            signal,
+                        );
 
                         if (signal?.aborted || id !== requestId) return;
 
                         set({
-                            chats,
+                            messages,
                             status: 'ready',
                             error: null,
                         });
@@ -61,12 +59,12 @@ export const useChatsStore = create<ChatsState>()(
                             error:
                                 error instanceof Error
                                     ? error.message
-                                    : 'Failed to load chats',
+                                    : 'Failed to load messages',
                         });
                     }
                 },
             };
         },
-        { name: 'chats' },
+        { name: 'messages' },
     ),
 );

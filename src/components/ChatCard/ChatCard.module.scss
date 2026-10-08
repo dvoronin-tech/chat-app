@@ -22,6 +22,19 @@
             );
         }
     }
+
+    &:focus-visible {
+        outline: 0.2rem solid var(--color-primary);
+        outline-offset: 0.2rem;
+    }
+}
+
+.selected {
+    background-color: color-mix(
+        in srgb,
+        var(--color-text-main) 12%,
+        transparent
+    );
 }
 
 .avatar {

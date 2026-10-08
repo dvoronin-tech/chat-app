@@ -17,6 +17,7 @@ export type ChatPayload = {
     type?: string;
     unreadCount?: number;
     archive?: boolean;
+    newChatId?: string;
 };
 
 export type SendMessagePayload = {
@@ -28,4 +29,13 @@ export type SendMessageResponse = {
     idMessage?: string;
 };
 
-export type Method = 'getChats' | 'sendMessage';
+export type ChatMessage = {
+    id: string;
+    direction: 'incoming' | 'outgoing';
+    timestamp: number;
+    text: string;
+    senderName: string | null;
+    imageUrl: string | null;
+};
+
+export type Method = 'getChats' | 'sendMessage' | 'getChatHistory';
