@@ -32,6 +32,7 @@ export type Method =
     | 'getChats'
     | 'checkWhatsapp'
     | 'sendMessage'
+    | 'readChat'
     | 'getChatHistory'
     | 'getMessage'
     | 'receiveNotification'

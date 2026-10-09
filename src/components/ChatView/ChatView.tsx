@@ -3,7 +3,7 @@ import {
     type FC,
     type SubmitEvent,
     memo,
-    useEffect,
+    useLayoutEffect,
     useRef,
     useState,
     useMemo,
@@ -15,20 +15,24 @@ import type {
 import { useChatsStore } from '../../store/chatsStore';
 import { useAuthStore } from '../../store/authStore';
 import { useGetChats } from '../../api/chats/getChats';
-import { useGetChatHistory } from '../../api/messages/getChatHistory';
+import {
+    useGetChatHistory,
+    type CachedChatMessage,
+} from '../../api/messages/getChatHistory';
 import { chatFromId } from '../../api/parsers/parseChat';
 import { useSendMessage } from '../../api/messages/sendMessage';
 import { formatMessageTime, messageDate } from '../../utils/messageTime';
 import Avatar from '../Avatar/Avatar';
 import Button from '../Button/Button';
 import Input from '../Input/Input';
+import { useReadVisibleMessages } from './useReadVisibleMessages';
 import styles from './ChatView.module.scss';
 
 export default function ChatView() {
     const selectedChatId = useChatsStore((state) => state.selectedChatId);
     const selectChat = useChatsStore((state) => state.selectChat);
     const credentials = useAuthStore((state) => state.credentials);
-    const { data: chats = [] } = useGetChats();
+    const { data: chats = [], isFetched: chatsFetched } = useGetChats();
     const chat = useMemo(() => {
         if (!selectedChatId) return null;
 
@@ -92,8 +96,13 @@ export default function ChatView() {
             </header>
             <div className={styles.canvas}>
                 <MessageList
+                    key={activeChat.id}
+                    chatId={activeChat.id}
+                    unreadCount={activeChat.unreadCount}
+                    chatsFetched={chatsFetched}
                     isLoading={isLoading}
                     isError={isError}
+                    isSuccess={isSuccess}
                     messages={messages}
                     error={error?.message ?? null}
                     showSender={showSender}
@@ -179,19 +188,42 @@ function Composer({
 }
 
 interface MessageListProps {
+    chatId: string;
+    unreadCount: number;
+    chatsFetched: boolean;
     isLoading: boolean;
     isError: boolean;
-    messages: ChatMessage[];
+    isSuccess: boolean;
+    messages: CachedChatMessage[];
     error: string | null;
     showSender: boolean;
     onRetry: () => void;
 }
 
 const MessageList: FC<MessageListProps> = memo(
-    ({ isLoading, isError, messages, error, showSender, onRetry }) => {
+    ({
+        chatId,
+        unreadCount,
+        chatsFetched,
+        isLoading,
+        isError,
+        isSuccess,
+        messages,
+        error,
+        showSender,
+        onRetry,
+    }) => {
         const listRef = useRef<HTMLDivElement>(null);
+        const unreadIds = useReadVisibleMessages({
+            listRef,
+            chatId,
+            messages,
+            unreadCount,
+            chatsFetched,
+            isSuccess,
+        });
 
-        useEffect(() => {
+        useLayoutEffect(() => {
             const list = listRef.current;
             if (!list || isLoading || isError) return;
 
@@ -211,7 +243,10 @@ const MessageList: FC<MessageListProps> = memo(
                         )}
                     />
                     <span
-                        className={clsx(styles.bubbleSkeleton, styles.bubbleWide)}
+                        className={clsx(
+                            styles.bubbleSkeleton,
+                            styles.bubbleWide,
+                        )}
                     />
                 </div>
             );
@@ -264,6 +299,11 @@ const MessageList: FC<MessageListProps> = memo(
                     return (
                         <article
                             key={message.id}
+                            data-message-id={
+                                unreadIds.has(message.id)
+                                    ? message.id
+                                    : undefined
+                            }
                             className={clsx(
                                 styles.message,
                                 styles[message.direction],
